@@ -23,7 +23,7 @@ source "$SCRIPT_DIR/lib/core/common.sh"
 
 # Version info
 VERSION="1.12.1"
-marmot_TAGLINE="can dig deep to clean your Mac."
+marmot_TAGLINE="can dig deep to clean your Linux."
 
 # Check if Touch ID is already configured
 is_touchid_configured() {
@@ -94,11 +94,11 @@ show_update_notification() {
 
 show_brand_banner() {
     cat << EOF
-${GREEN} __  __       _      ${NC}
-${GREEN}|  \/  | ___ | | ___ ${NC}
-${GREEN}| |\/| |/ _ \| |/ _ \\${NC}
-${GREEN}| |  | | (_) | |  __/${NC}  ${BLUE}https://github.com/naiplawan/marmot${NC}
-${GREEN}|_|  |_|\___/|_|\___|${NC}  ${GREEN}${marmot_TAGLINE}${NC}
+${GREEN} __  __                         _   ${NC}
+${GREEN}|  \/  | __ _ _ __ _ __ ___   ___ | |_ ${NC}
+${GREEN}| |\/| |/ _\` | '__| '_ \` _ \ / _ \| __|${NC}
+${GREEN}| |  | | (_| | |  | | | | | | (_) | |_ ${NC}  ${BLUE}https://github.com/naiplawan/marmot${NC}
+${GREEN}|_|  |_|\__,_|_|  |_| |_| |_|\___/ \__|${NC}  ${GREEN}${marmot_TAGLINE}${NC}
 
 EOF
 }
@@ -117,13 +117,14 @@ animate_marmot_intro() {
     while IFS= read -r line; do
         marmot_lines+=("$line")
     done << 'EOF'
-        /\_/\
-   ____/ o o \
- /~____  =o= /
-(______)__m_m)
-        /   \
-     __/ /\ \__
-    /__/  \__\_
+      _,,_
+     /o  o\
+    ( =Y=  )
+     /`-'-'\
+    /       \
+   (_/     \_)
+     \     /
+      `"""`
 EOF
 
     local idx
