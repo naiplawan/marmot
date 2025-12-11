@@ -39,7 +39,7 @@ fi; }
 # Verbosity (0 = quiet, 1 = verbose)
 VERBOSE=1
 
-# Icons (duplicated from lib/core/commarmotn.sh - necessary as install.sh runs standalone)
+# Icons (duplicated from lib/core/common.sh - necessary as install.sh runs standalone)
 readonly ICON_SUCCESS="✓"
 readonly ICON_ADMIN="●"
 readonly ICON_CONFIRM="◎"
@@ -251,7 +251,7 @@ check_requirements() {
 
     # Check for required dependencies
     local missing_deps=()
-    for cmd in find xargs stat rm chmarmotd; do
+    for cmd in find xargs stat rm chmod; do
         if ! command -v "$cmd" > /dev/null 2>&1; then
             missing_deps+=("$cmd")
         fi
@@ -300,10 +300,10 @@ install_files() {
             if [[ "$INSTALL_DIR" == "/usr/local/bin" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
                 log_admin "Admin access required for /usr/local/bin"
                 sudo cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
-                sudo chmarmotd +x "$INSTALL_DIR/marmot"
+                sudo chmod +x "$INSTALL_DIR/marmot"
             else
                 cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
-                chmarmotd +x "$INSTALL_DIR/marmot"
+                chmod +x "$INSTALL_DIR/marmot"
             fi
             log_success "Installed marmot to $INSTALL_DIR"
         fi
@@ -319,16 +319,16 @@ install_files() {
         else
             if [[ "$INSTALL_DIR" == "/usr/local/bin" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
                 sudo cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
-                sudo chmarmotd +x "$INSTALL_DIR/marmot"
+                sudo chmod +x "$INSTALL_DIR/marmot"
             else
                 cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
-                chmarmotd +x "$INSTALL_DIR/marmot"
+                chmod +x "$INSTALL_DIR/marmot"
             fi
             log_success "Installed marmot alias"
         fi
     fi
 
-    # Copy configuration and marmotdules
+    # Copy configuration and modules
     if [[ -d "$SOURCE_DIR/bin" ]]; then
         local source_bin_abs="$(cd "$SOURCE_DIR/bin" && pwd)"
         local config_bin_abs="$(cd "$CONFIG_DIR/bin" && pwd)"
@@ -336,8 +336,8 @@ install_files() {
             log_success "Modules already synced"
         else
             cp -r "$SOURCE_DIR/bin"/* "$CONFIG_DIR/bin/"
-            chmarmotd +x "$CONFIG_DIR/bin"/*
-            log_success "Installed marmotdules"
+            chmod +x "$CONFIG_DIR/bin"/*
+            log_success "Installed modules"
         fi
     fi
 
@@ -362,7 +362,7 @@ install_files() {
     fi
 
     if [[ -f "$CONFIG_DIR/install-linux.sh" ]]; then
-        chmarmotd +x "$CONFIG_DIR/install-linux.sh"
+        chmod +x "$CONFIG_DIR/install-linux.sh"
     fi
 
     # Update the marmot script to use the config directory when installed elsewhere
@@ -377,7 +377,7 @@ install_files() {
 
 # Verify installation
 verify_installation() {
-    if [[ -x "$INSTALL_DIR/marmot" ]] && [[ -f "$CONFIG_DIR/lib/core/commarmotn.sh" ]]; then
+    if [[ -x "$INSTALL_DIR/marmot" ]] && [[ -f "$CONFIG_DIR/lib/core/common.sh" ]]; then
         # Test if marmot command works
         if "$INSTALL_DIR/marmot" --help > /dev/null 2>&1; then
             return 0
@@ -434,17 +434,17 @@ print_usage_summary() {
     if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
         echo "  marmot                # Interactive menu"
         echo "  marmot clean          # System cleanup"
-        echo "  marmot uninstall      # Remarmotve applications"
+        echo "  marmot uninstall      # Remove applications"
         echo "  marmot update         # Update marmot to the latest version"
-        echo "  marmot remarmotve         # Remarmotve marmot from the system"
+        echo "  marmot remove         # Remove marmot from the system"
         echo "  marmot --version      # Show installed version"
         echo "  marmot --help         # Show this help message"
     else
         echo "  $INSTALL_DIR/marmot                # Interactive menu"
         echo "  $INSTALL_DIR/marmot clean          # System cleanup"
-        echo "  $INSTALL_DIR/marmot uninstall      # Remarmotve applications"
+        echo "  $INSTALL_DIR/marmot uninstall      # Remove applications"
         echo "  $INSTALL_DIR/marmot update         # Update marmot to the latest version"
-        echo "  $INSTALL_DIR/marmot remarmotve         # Remarmotve marmot from the system"
+        echo "  $INSTALL_DIR/marmot remove         # Remove marmot from the system"
         echo "  $INSTALL_DIR/marmot --version      # Show installed version"
         echo "  $INSTALL_DIR/marmot --help         # Show this help message"
     fi
@@ -456,7 +456,7 @@ uninstall_marmot() {
     log_confirm "Uninstalling marmot"
     echo ""
 
-    # Remarmotve executable
+    # Remove executable
     if [[ -f "$INSTALL_DIR/marmot" ]]; then
         if [[ "$INSTALL_DIR" == "/usr/local/bin" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
             log_admin "Admin access required"
@@ -464,7 +464,7 @@ uninstall_marmot() {
         else
             rm -f "$INSTALL_DIR/marmot"
         fi
-        log_success "Remarmotved marmot executable"
+        log_success "Removed marmot executable"
     fi
 
     if [[ -f "$INSTALL_DIR/marmot" ]]; then
@@ -473,11 +473,11 @@ uninstall_marmot() {
         else
             rm -f "$INSTALL_DIR/marmot"
         fi
-        log_success "Remarmotved marmot alias"
+        log_success "Removed marmot alias"
     fi
 
-    # SAFETY CHECK: Verify config directory is safe to remarmotve
-    # Only allow remarmotval of marmot-specific directories
+    # SAFETY CHECK: Verify config directory is safe to remove
+    # Only allow removal of marmot-specific directories
     local is_safe=0
 
     # Additional safety: never delete system critical paths (check first)
@@ -498,18 +498,18 @@ uninstall_marmot() {
     # Ask before remarmotving config directory
     if [[ -d "$CONFIG_DIR" ]]; then
         if [[ $is_safe -eq 0 ]]; then
-            log_warning "Config directory $CONFIG_DIR is not safe to auto-remarmotve"
-            log_warning "Skipping automatic remarmotval for safety"
+            log_warning "Config directory $CONFIG_DIR is not safe to auto-remove"
+            log_warning "Skipping automatic removal for safety"
             echo ""
-            echo "Please manually review and remarmotve marmot-specific files from:"
+            echo "Please manually review and remove marmot-specific files from:"
             echo "  $CONFIG_DIR"
         else
             echo ""
-            read -p "Remarmotve configuration directory $CONFIG_DIR? (y/N): " -n 1 -r
+            read -p "Remove configuration directory $CONFIG_DIR? (y/N): " -n 1 -r
             echo ""
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 rm -rf "$CONFIG_DIR"
-                log_success "Remarmotved configuration"
+                log_success "Removed configuration"
             else
                 log_success "Configuration preserved"
             fi
@@ -548,9 +548,9 @@ perform_update() {
     if command -v dpkg > /dev/null 2>&1 && dpkg -l marmot > /dev/null 2>&1; then
         # Try to use shared function if available (when running from installed marmot)
         resolve_source_dir 2> /dev/null || true
-        if [[ -f "$SOURCE_DIR/lib/core/commarmotn.sh" ]]; then
+        if [[ -f "$SOURCE_DIR/lib/core/common.sh" ]]; then
             # shellcheck disable=SC1090,SC1091
-            source "$SOURCE_DIR/lib/core/commarmotn.sh"
+            source "$SOURCE_DIR/lib/core/common.sh"
             # Update via apt would be here when implemented
             log_info "marmot is installed via package manager. Use apt to update."
         else
