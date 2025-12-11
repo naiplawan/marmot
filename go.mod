@@ -1,4 +1,4 @@
-module github.com/tw93/marmot
+module github.com/naiplawan/marmot
 
 go 1.24.0
 

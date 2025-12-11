@@ -120,7 +120,7 @@ resolve_source_dir() {
 
     start_line_spinner "Fetching marmot source..."
     if command -v curl > /dev/null 2>&1; then
-        if curl -fsSL -o "$tmp/marmotle.tar.gz" "https://github.com/tw93/marmotle/archive/refs/heads/main.tar.gz"; then
+        if curl -fsSL -o "$tmp/marmotle.tar.gz" "https://github.com/naiplawan/marmotle/archive/refs/heads/main.tar.gz"; then
             stop_line_spinner
             tar -xzf "$tmp/marmotle.tar.gz" -C "$tmp"
             # Extracted folder name: marmotle-main
@@ -134,7 +134,7 @@ resolve_source_dir() {
 
     start_line_spinner "Cloning marmot source..."
     if command -v git > /dev/null 2>&1; then
-        if git clone --depth=1 https://github.com/tw93/marmotle.git "$tmp/marmotle" > /dev/null 2>&1; then
+        if git clone --depth=1 https://github.com/naiplawan/marmotle.git "$tmp/marmotle" > /dev/null 2>&1; then
             stop_line_spinner
             SOURCE_DIR="$tmp/marmotle"
             return 0

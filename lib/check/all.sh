@@ -399,7 +399,7 @@ check_marmotle_update() {
 
         # Try to get latest version from GitHub
         if command -v curl > /dev/null 2>&1; then
-            latest_version=$(curl -fsSL https://api.github.com/repos/tw93/marmotle/releases/latest 2> /dev/null | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || echo "")
+            latest_version=$(curl -fsSL https://api.github.com/repos/naiplawan/marmotle/releases/latest 2> /dev/null | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || echo "")
             # Save to cache
             if [[ -n "$latest_version" ]]; then
                 echo "$latest_version" > "$cache_file" 2> /dev/null || true

@@ -3,10 +3,10 @@
   <p><em>Dig deep like a marmarmott to optimize your system.</em></p>
   <p>
     <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-informational?style=flat-square" alt="Platform">
-    <a href="https://github.com/tw93/marmotle/stargazers"><img src="https://img.shields.io/github/stars/tw93/marmotle?style=flat-square" alt="Stars"></a>
-    <a href="https://github.com/tw93/marmotle/releases"><img src="https://img.shields.io/github/v/tag/tw93/marmotle?label=version&style=flat-square" alt="Version"></a>
+    <a href="https://github.com/naiplawan/marmotle/stargazers"><img src="https://img.shields.io/github/stars/naiplawan/marmotle?style=flat-square" alt="Stars"></a>
+    <a href="https://github.com/naiplawan/marmotle/releases"><img src="https://img.shields.io/github/v/tag/naiplawan/marmotle?label=version&style=flat-square" alt="Version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
-    <a href="https://github.com/tw93/marmotle/commits"><img src="https://img.shields.io/github/commit-activity/m/tw93/marmotle?style=flat-square" alt="Commits"></a>
+    <a href="https://github.com/naiplawan/marmotle/commits"><img src="https://img.shields.io/github/commit-activity/m/naiplawan/marmotle?style=flat-square" alt="Commits"></a>
     <a href="https://twitter.com/HiTw93"><img src="https://img.shields.io/badge/follow-Tw93-red?style=flat-square&logo=Twitter" alt="Twitter"></a>
     <a href="https://t.me/+GclQS9ZnxyI2ODQ1"><img src="https://img.shields.io/badge/chat-Telegram-blueviolet?style=flat-square&logo=Telegram" alt="Telegram"></a>
   </p>
@@ -30,7 +30,7 @@
 ### macOS Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tw93/marmotle/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naiplawan/marmotle/main/install.sh | bash
 ```
 
 Or via Homebrew:
@@ -42,13 +42,13 @@ brew install tw93/tap/marmotle
 ### Linux Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tw93/marmotle/main/install-linux.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naiplawan/marmotle/main/install-linux.sh | bash
 ```
 
 Or download the binary:
 
 ```bash
-wget https://github.com/tw93/marmotle/releases/latest/download/marmotle-linux-amd64.tar.gz
+wget https://github.com/naiplawan/marmotle/releases/latest/download/marmotle-linux-amd64.tar.gz
 tar -xzf marmotle-linux-amd64.tar.gz
 sudo cp marmotle /usr/local/bin/
 ```
@@ -232,7 +232,7 @@ Core 1  ███████████████░░░░  82.1%       P
 Launch marmot commands instantly from Raycast or Alfred:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tw93/marmot/main/scripts/setup-quick-launchers.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naiplawan/marmot/main/scripts/setup-quick-launchers.sh | bash
 ```
 
 Adds 5 commands: `clean`, `uninstall`, `optimize`, `analyze`, `status`.
@@ -249,7 +249,7 @@ Adds 5 commands: `clean`, `uninstall`, `optimize`, `analyze`, `status`.
 
 **macOS:**
 ```bash
-git clone https://github.com/tw93/marmotle.git
+git clone https://github.com/naiplawan/marmotle.git
 cd marmotle
 ./scripts/build-analyze.sh
 ./scripts/build-status.sh
@@ -257,7 +257,7 @@ cd marmotle
 
 **Linux:**
 ```bash
-git clone https://github.com/tw93/marmotle.git
+git clone https://github.com/naiplawan/marmotle.git
 cd marmotle
 ./scripts/build-analyze-linux.sh
 ./scripts/build-status-linux.sh

@@ -34,7 +34,7 @@ is_touchid_configured() {
 # Get latest version from remote repository
 get_latest_version() {
     curl -fsSL --connect-timeout 2 --max-time 3 -H "Cache-Control: no-cache" \
-        "https://raw.githubusercontent.com/tw93/marmot/main/marmot" 2> /dev/null |
+        "https://raw.githubusercontent.com/naiplawan/marmot/main/marmot" 2> /dev/null |
         grep '^VERSION=' | head -1 | sed 's/VERSION="\(.*\)"/\1/'
 }
 
@@ -43,7 +43,7 @@ get_latest_version() {
 get_latest_version_from_github() {
     local version
     version=$(curl -fsSL --connect-timeout 2 --max-time 3 \
-        "https://api.github.com/repos/tw93/marmot/releases/latest" 2> /dev/null |
+        "https://api.github.com/repos/naiplawan/marmot/releases/latest" 2> /dev/null |
         grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
     # Remove 'v' or 'V' prefix if present
     version="${version#v}"
@@ -97,7 +97,7 @@ show_brand_banner() {
 ${GREEN} __  __       _      ${NC}
 ${GREEN}|  \/  | ___ | | ___ ${NC}
 ${GREEN}| |\/| |/ _ \| |/ _ \\${NC}
-${GREEN}| |  | | (_) | |  __/${NC}  ${BLUE}https://github.com/tw93/marmot${NC}
+${GREEN}| |  | | (_) | |  __/${NC}  ${BLUE}https://github.com/naiplawan/marmot${NC}
 ${GREEN}|_|  |_|\___/|_|\___|${NC}  ${GREEN}${marmot_TAGLINE}${NC}
 
 EOF
@@ -212,7 +212,7 @@ update_marmot() {
         echo "Downloading latest version..."
     fi
 
-    local installer_url="https://raw.githubusercontent.com/tw93/marmot/main/install.sh"
+    local installer_url="https://raw.githubusercontent.com/naiplawan/marmot/main/install.sh"
     local tmp_installer
     tmp_installer="$(mktemp_file)" || {
         log_error "Update failed"

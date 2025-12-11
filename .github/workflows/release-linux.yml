@@ -64,7 +64,7 @@ jobs:
             ### Installation
             ```bash
             # Download the appropriate binary
-            wget https://github.com/tw93/marmot/releases/download/${{ github.ref_name }}/marmot-linux-${{ matrix.arch }}.tar.gz
+            wget https://github.com/naiplawan/marmot/releases/download/${{ github.ref_name }}/marmot-linux-${{ matrix.arch }}.tar.gz
 
             # Extract and install
             tar -xzf marmot-linux-${{ matrix.arch }}.tar.gz
