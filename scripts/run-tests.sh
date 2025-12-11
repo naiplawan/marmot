@@ -59,7 +59,7 @@ if command -v bats > /dev/null 2>&1; then
     fi
 else
     echo -e "${YELLOW}⚠ Bats not installed, skipping unit tests${NC}"
-    echo "  Install with: brew install bats-core"
+    echo "  Install with: sudo apt install bats-core"
 fi
 echo ""
 

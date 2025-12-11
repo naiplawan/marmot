@@ -337,7 +337,7 @@ check_appstore_updates() {
 
 check_macos_update() {
     # Check whitelist
-    if command -v is_whitelisted > /dev/null && is_whitelisted "check_macos_updates"; then return; fi
+    if command -v is_whitelisted > /dev/null && is_whitelisted "check_linux_updates"; then return; fi
     local spinner_started=false
     if [[ -t 1 ]]; then
         printf "  Checking macOS updates...\r"

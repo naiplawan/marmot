@@ -41,7 +41,7 @@ save_whitelist_patterns() {
         header_text="# marmot Optimization Whitelist - These checks will be skipped during optimization"
     else
         config_file="$WHITELIST_CONFIG_CLEAN"
-        header_text="# marmot Whitelist - Protected paths won't be deleted\n# Default protections: Playwright browsers, HuggingFace models, Maven repo, Ollama models, Surge Mac, R renv, Finder metadata\n# Add one pattern per line to keep items safe."
+        header_text="# marmot Whitelist - Protected paths won't be deleted\n# Default protections: Playwright browsers, HuggingFace models, Maven repo, Ollama models, Surge Linux, R renv, system metadata\n# Add one pattern per line to keep items safe."
     fi
 
     mkdir -p "$(dirname "$config_file")"
@@ -153,16 +153,8 @@ get_optimize_whitelist_items() {
     # Format: "display_name|pattern|category"
     cat << 'EOF'
 Linux Firewall check|firewall|security_check
-Gatekeeper check|gatekeeper|security_check
-Homebrew updates check|check_brew_updates|update_check
-Linux system updates check|check_macos_updates|update_check
-Homebrew health check (doctor)|check_brew_health|health_check
-SIP status check|check_sip|security_check
-FileVault status check|check_filevault|security_check
-TouchID sudo check|check_touchid|config_check
-Rosetta 2 check|check_rosetta|config_check
+Linux system updates check|check_linux_updates|update_check
 Git configuration check|check_git_config|config_check
-Login items check|check_login_items|config_check
 EOF
 }
 

@@ -18,7 +18,7 @@ readonly marmot_TIMEOUT_LOADED=1
 # Sets MO_TIMEOUT_BIN to the available timeout command
 #
 # Recommendation: Install coreutils for reliable timeout support
-#   brew install coreutils
+#   apt install coreutils
 #
 # The shell-based fallback has known limitations:
 #   - May not clean up all child processes
@@ -39,7 +39,7 @@ if [[ -z "${MAR_TIMEOUT_INITIALIZED:-}" ]]; then
     # Log warning if no timeout command available
     if [[ -z "$MAR_TIMEOUT_BIN" ]] && [[ "${MAR_DEBUG:-0}" == "1" ]]; then
         echo "[TIMEOUT] No timeout command found, using shell fallback" >&2
-        echo "[TIMEOUT] Install coreutils for better reliability: brew install coreutils" >&2
+        echo "[TIMEOUT] Install coreutils for better reliability: apt install coreutils" >&2
     fi
 
     export MAR_TIMEOUT_INITIALIZED=1
