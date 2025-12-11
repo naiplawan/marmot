@@ -267,7 +267,7 @@ clean_orphaned_app_data_macos() {
 
 # Clean desktop files and Linux-specific junk
 clean_linux_desktop_files() {
-    # Skip on macOS
+    # Skip on Linux
     is_linux || return 0
 
     local file_count=0
@@ -412,7 +412,7 @@ clean_linux_desktop_files() {
 
 # Clean package manager debris (Linux only)
 clean_package_debris() {
-    # Skip on macOS
+    # Skip on Linux
     is_linux || return 0
 
     local cleaned_size=0
@@ -586,7 +586,7 @@ clean_orphaned_app_data() {
 
 # Main function to clean application-related junk files
 clean_app_junk_files() {
-    # Clean .DS_Store on macOS
+    # Clean .DS_Store on Linux
     clean_ds_store_tree "$HOME" "Home folder .DS_Store"
 
     # Clean orphaned app data

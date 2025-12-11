@@ -188,7 +188,7 @@ clean_deep_system() {
     fi
 }
 
-# Clean failed backups (Time Machine on macOS, various backup tools on Linux)
+# Clean failed backups (Time Machine on Linux, various backup tools on Linux)
 clean_failed_backups() {
     if is_macos; then
         clean_time_machine_failed_backups

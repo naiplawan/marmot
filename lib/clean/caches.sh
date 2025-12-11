@@ -22,7 +22,7 @@ is_linux() {
 # Trigger all TCC permission dialogs upfront to avoid random interruptions
 # Only runs once (uses ~/.cache/marmot/permissions_granted flag)
 check_tcc_permissions() {
-    # Only check on macOS
+    # Only check on Linux
     is_macos || return 0
     # Only check in interactive mode
     [[ -t 1 ]] || return 0
@@ -317,7 +317,7 @@ clean_spotlight_caches() {
 
 # Clean Linux system caches (Linux only)
 clean_linux_system_caches() {
-    # Skip on macOS
+    # Skip on Linux
     is_linux || return 0
 
     local cleaned_size=0
@@ -430,7 +430,7 @@ clean_linux_system_caches() {
 
 # Clean locate database (Linux)
 clean_locate_cache() {
-    # Skip on macOS
+    # Skip on Linux
     is_linux || return 0
 
     if command -v updatedb > /dev/null 2>&1; then
@@ -532,7 +532,7 @@ clean_browser_caches() {
 
 # Clean all caches (platform-aware)
 clean_all_caches() {
-    # Check TCC permissions on macOS
+    # Check TCC permissions on Linux
     check_tcc_permissions
 
     # Clean project caches (Next.js, Python, etc.)

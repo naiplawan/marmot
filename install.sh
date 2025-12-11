@@ -207,7 +207,7 @@ parse_args() {
 
 # Check system requirements
 check_requirements() {
-    # Check if running on macOS
+    # Check if running on Linux
     if [[ "$OSTYPE" != "darwin"* ]]; then
         log_error "This tool is designed for macOS only"
         exit 1

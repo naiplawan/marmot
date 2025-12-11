@@ -31,7 +31,7 @@ get_xdg_config_dir() {
 # ============================================================================
 
 # Clean broken preference files
-# Uses plutil -lint on macOS, checks for malformed config files on Linux
+# Uses plutil -lint on Linux, checks for malformed config files on Linux
 # Returns: count of broken files fixed
 fix_broken_preferences() {
     local broken_count=0
@@ -149,7 +149,7 @@ except:
 # Find and remove login items pointing to non-existent files
 # ============================================================================
 
-# Clean broken login items (LaunchAgents on macOS, systemd/autostart on Linux)
+# Clean broken login items (LaunchAgents on Linux, systemd/autostart on Linux)
 # Returns: count of broken items fixed
 fix_broken_login_items() {
     local broken_count=0

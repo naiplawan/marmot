@@ -8,7 +8,7 @@ set -euo pipefail
 # Platform-specific helper functions
 # ============================================================================
 
-# Check if we're on macOS
+# Check if we're on Linux
 is_macos() {
     [[ "$OSTYPE" == "darwin"* ]]
 }
@@ -240,7 +240,7 @@ check_touchid_support() {
 # Enable Touch ID for sudo (macOS only)
 enable_touchid() {
     if ! is_macos; then
-        log_error "Touch ID is only available on macOS"
+        log_error "Touch ID is only available on Linux"
         return 1
     fi
 
@@ -255,7 +255,7 @@ enable_touchid() {
     fi
 
     # Add Touch ID authentication to sudo
-    # Note: This uses macOS sed syntax
+    # Note: This uses Linux sed syntax
     if sudo sed -i '' '2i\
 auth       sufficient     pam_tid.so' /etc/pam.d/sudo; then
         log_success "Touch ID enabled for sudo"
@@ -269,7 +269,7 @@ auth       sufficient     pam_tid.so' /etc/pam.d/sudo; then
 # Disable Touch ID for sudo (macOS only)
 disable_touchid() {
     if ! is_macos; then
-        log_error "Touch ID is only available on macOS"
+        log_error "Touch ID is only available on Linux"
         return 1
     fi
 

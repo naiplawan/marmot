@@ -338,7 +338,7 @@ readonly DATA_PROTECTED_APPS=(
 # Helper Functions
 # ============================================================================
 
-# Check if we're on macOS
+# Check if we're on Linux
 is_macos() {
     [[ "$OSTYPE" == "darwin"* ]]
 }

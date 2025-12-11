@@ -461,7 +461,7 @@ start_cleanup() {
         printf '\033[2J\033[H'
     fi
     printf '\n'
-    echo -e "${PURPLE_BOLD}Clean Your Mac${NC}"
+    echo -e "${PURPLE_BOLD}Clean Your Linux${NC}"
     echo ""
 
     if [[ "$DRY_RUN" != "true" && -t 0 ]]; then
@@ -606,9 +606,9 @@ perform_cleanup() {
     clean_finder_metadata
     end_section
 
-    # ===== 3. macOS system caches =====
-    start_section "macOS system caches"
-    # macOS system caches cleanup (delegated to clean_user_data module)
+    # ===== 3. Linux system caches =====
+    start_section "Linux system caches"
+    # Linux system caches cleanup (delegated to clean_user_data module)
     clean_macos_system_caches
     end_section
 

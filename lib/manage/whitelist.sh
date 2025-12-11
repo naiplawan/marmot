@@ -152,10 +152,10 @@ EOF
 get_optimize_whitelist_items() {
     # Format: "display_name|pattern|category"
     cat << 'EOF'
-macOS Firewall check|firewall|security_check
+Linux Firewall check|firewall|security_check
 Gatekeeper check|gatekeeper|security_check
 Homebrew updates check|check_brew_updates|update_check
-macOS system updates check|check_macos_updates|update_check
+Linux system updates check|check_macos_updates|update_check
 Homebrew health check (doctor)|check_brew_health|health_check
 SIP status check|check_sip|security_check
 FileVault status check|check_filevault|security_check
