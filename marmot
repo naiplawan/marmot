@@ -1,6 +1,6 @@
 #!/bin/bash
 # marmot - Main Entry Point
-# A comprehensive macOS maintenance tool
+# A comprehensive Linux maintenance tool
 #
 # Clean - Remove junk files and optimize system
 # Uninstall - Remove applications completely
@@ -25,12 +25,6 @@ source "$SCRIPT_DIR/lib/core/common.sh"
 VERSION="1.12.1"
 marmot_TAGLINE="can dig deep to clean your Linux."
 
-# Check if Touch ID is already configured
-is_touchid_configured() {
-    local pam_sudo_file="/etc/pam.d/sudo"
-    [[ -f "$pam_sudo_file" ]] && grep -q "pam_tid.so" "$pam_sudo_file" 2> /dev/null
-}
-
 # Get latest version from remote repository
 get_latest_version() {
     curl -fsSL --connect-timeout 2 --max-time 3 -H "Cache-Control: no-cache" \
@@ -49,11 +43,6 @@ get_latest_version_from_github() {
     version="${version#v}"
     version="${version#V}"
     echo "$version"
-}
-
-# Check if installed via Homebrew
-is_homebrew_install() {
-    command -v brew > /dev/null 2>&1 && brew list marmot > /dev/null 2>&1
 }
 
 # Check for updates (non-blocking, always check in background)
@@ -163,7 +152,6 @@ show_help() {
     printf "  %s%-28s%s %s\n" "$GREEN" "mar optimize" "$NC" "Check and maintain system"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar analyze" "$NC" "Explore disk usage"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar status" "$NC" "Monitor system health"
-    printf "  %s%-28s%s %s\n" "$GREEN" "mar touchid" "$NC" "Configure Touch ID for sudo"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar update" "$NC" "Update to latest version"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar remove" "$NC" "Remove marmot from system"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar --version" "$NC" "Show version"
@@ -179,12 +167,6 @@ update_marmot() {
     # Set up cleanup trap for update process
     local update_interrupted=false
     trap 'update_interrupted=true; echo ""; log_error "Update interrupted by user"; exit 130' INT TERM
-
-    # Check if installed via Homebrew
-    if is_homebrew_install; then
-        update_via_homebrew "$VERSION"
-        exit 0
-    fi
 
     # Check for updates
     local latest
@@ -338,23 +320,14 @@ remove_marmot() {
         echo "Detecting installations..."
     fi
 
-    local is_homebrew=false
     local -a manual_installs=()
     local -a alias_installs=()
-
-    # Check Homebrew
-    if is_homebrew_install; then
-        is_homebrew=true
-    fi
 
     # Find marmot installations using which/command
     local found_marmot
     found_marmot=$(command -v marmot 2> /dev/null || true)
     if [[ -n "$found_marmot" && -f "$found_marmot" ]]; then
-        # Check if it's not a Homebrew symlink
-        if [[ ! -L "$found_marmot" ]] || ! readlink "$found_marmot" | grep -q "Cellar/marmot"; then
-            manual_installs+=("$found_marmot")
-        fi
+        manual_installs+=("$found_marmot")
     fi
 
     # Also check common locations as fallback
@@ -366,10 +339,7 @@ remove_marmot() {
 
     for path in "${fallback_paths[@]}"; do
         if [[ -f "$path" && "$path" != "$found_marmot" ]]; then
-            # Check if it's not a Homebrew symlink
-            if [[ ! -L "$path" ]] || ! readlink "$path" | grep -q "Cellar/marmot"; then
-                manual_installs+=("$path")
-            fi
+            manual_installs+=("$path")
         fi
     done
 
@@ -402,16 +372,13 @@ remove_marmot() {
     # Check if anything to remove
     local manual_count=${#manual_installs[@]}
     local alias_count=${#alias_installs[@]}
-    if [[ "$is_homebrew" == "false" && ${manual_count:-0} -eq 0 && ${alias_count:-0} -eq 0 ]]; then
+    if [[ ${manual_count:-0} -eq 0 && ${alias_count:-0} -eq 0 ]]; then
         printf '%s\n\n' "${YELLOW}No marmot installation detected${NC}"
         exit 0
     fi
 
     # Show what will be removed
     echo -e "${YELLOW}Remove marmot${NC} - will delete the following:"
-    if [[ "$is_homebrew" == "true" ]]; then
-        echo "  - marmot via Homebrew"
-    fi
     for install in ${manual_installs[@]+"${manual_installs[@]}"} ${alias_installs[@]+"${alias_installs[@]}"}; do
         echo "  - $install"
     done
@@ -439,14 +406,8 @@ remove_marmot() {
             ;;
     esac
 
-    # Remove Homebrew installation (silent)
-    local has_error=false
-    if [[ "$is_homebrew" == "true" ]]; then
-        if ! brew uninstall marmot > /dev/null 2>&1; then
-            has_error=true
-        fi
-    fi
     # Remove manual installations
+    local has_error=false
     if [[ ${manual_count:-0} -gt 0 ]]; then
         for install in "${manual_installs[@]}"; do
             if [[ -f "$install" ]]; then
@@ -540,14 +501,7 @@ show_main_menu() {
 
     if [[ -t 0 ]]; then
         printf '\r\033[2K\n'
-        # Show TouchID if not configured, otherwise show Update
-        local controls="${GRAY}↑↓  |  Enter  |  M More  |  "
-        if ! is_touchid_configured; then
-            controls="${controls}T TouchID"
-        else
-            controls="${controls}U Update"
-        fi
-        controls="${controls}  |  Q Quit${NC}"
+        local controls="${GRAY}↑↓  |  Enter  |  M More  |  U Update  |  Q Quit${NC}"
         printf '\r\033[2K%s\n' "$controls"
         printf '\r\033[2K\n'
     fi
@@ -651,10 +605,6 @@ interactive_main_menu() {
                 show_version
                 exit 0
                 ;;
-            "TOUCHID")
-                show_cursor
-                exec "$SCRIPT_DIR/bin/touchid.sh"
-                ;;
             "UPDATE")
                 show_cursor
                 clear
@@ -698,9 +648,6 @@ main() {
             ;;
         "status")
             exec "$SCRIPT_DIR/bin/status.sh" "${args[@]:1}"
-            ;;
-        "touchid")
-            exec "$SCRIPT_DIR/bin/touchid.sh" "${args[@]:1}"
             ;;
         "update")
             update_marmot
