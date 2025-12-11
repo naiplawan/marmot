@@ -152,6 +152,15 @@ show_help() {
     printf "  %s%-28s%s %s\n" "$GREEN" "mar optimize" "$NC" "Check and maintain system"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar analyze" "$NC" "Explore disk usage"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar status" "$NC" "Monitor system health"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar extended" "$NC" "Advanced features menu"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar schedule" "$NC" "Automated maintenance"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar analytics" "$NC" "Storage trends & reports"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar duplicates" "$NC" "Find duplicate files"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar security" "$NC" "Privacy & security tools"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar network" "$NC" "Network optimization"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar apps" "$NC" "App usage analytics"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar config" "$NC" "Advanced configuration"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar plugins" "$NC" "Plugin manager"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar update" "$NC" "Update to latest version"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar remove" "$NC" "Remove marmot from system"
     printf "  %s%-28s%s %s\n" "$GREEN" "mar --version" "$NC" "Show version"
@@ -159,6 +168,17 @@ show_help() {
     echo
     printf "%s%s%s\n" "$BLUE" "OPTIONS" "$NC"
     printf "  %s%-28s%s %s\n" "$GREEN" "--debug" "$NC" "Show detailed operation logs"
+    echo
+    printf "%s%s%s\n" "$BLUE" "EXTENDED FEATURES" "$NC"
+    printf "  %s%-28s%s %s\n" "$GREEN" "mar extended" "$NC" "Launch full-featured menu"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar schedule" "$NC" "Automated system maintenance"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar analytics" "$NC" "Storage analytics & reports"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar duplicates" "$NC" "Find duplicate files"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar security" "$NC" "Privacy & security tools"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar network" "$NC" "Network optimization"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar apps" "$NC" "App usage analytics"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar config" "$NC" "Advanced configuration"
+    printf "  %s%-28s%s %s\n" "$GRAY" "  mar plugins" "$NC" "Plugin manager"
     echo
 }
 
@@ -648,6 +668,63 @@ main() {
             ;;
         "status")
             exec "$SCRIPT_DIR/bin/status.sh" "${args[@]:1}"
+            ;;
+        "extended")
+            exec "$SCRIPT_DIR/bin/extended_menu.sh" "${args[@]:1}"
+            ;;
+        "schedule")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/schedule/schedule.sh"
+            schedule_init
+            shift
+            "${args[@]:-schedule_status}"
+            ;;
+        "analytics")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/analytics/analytics.sh"
+            analytics_init
+            echo "Storage Analytics - Use 'mar extended' for interactive mode"
+            echo "Available commands:"
+            echo "  analytics_snapshot [path]    - Take storage snapshot"
+            echo "  analytics_storage_report [days] - Generate report"
+            echo "  analytics_predict_issues [threshold] [days] - Predict storage"
+            ;;
+        "duplicates")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/duplicate/duplicate.sh"
+            duplicate_init
+            echo "Duplicate File Finder - Use 'mar extended' for interactive mode"
+            echo "Example: duplicate_scan /path/to/scan"
+            ;;
+        "security")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/security/security.sh"
+            security_init
+            security_menu
+            ;;
+        "network")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/network/network.sh"
+            network_init
+            network_menu
+            ;;
+        "apps")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/appusage/appusage.sh"
+            appusage_init
+            appusage_menu
+            ;;
+        "config")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/config/advanced_config.sh"
+            config_init
+            config_interactive
+            ;;
+        "plugins")
+            source "$SCRIPT_DIR/lib/core/common.sh"
+            source "$SCRIPT_DIR/lib/plugins/plugin_system.sh"
+            plugin_init
+            plugin_menu
             ;;
         "update")
             update_marmot
