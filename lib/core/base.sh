@@ -62,16 +62,15 @@ declare -a DEFAULT_WHITELIST_PATTERNS=(
     "$HOME/.cache/huggingface*"
     "$HOME/.m2/repository/*"
     "$HOME/.ollama/models/*"
-    "$HOME/Library/Caches/com.nssurge.surge-mac/*"
-    "$HOME/Library/Application Support/com.nssurge.surge-mac/*"
-    "$HOME/Library/Caches/org.R-project.R/R/renv/*"
+    "$HOME/.cache/nssurge/*"
+    "$HOME/.config/nssurge/*"
+    "$HOME/.cache/R/renv/*"
     "$FINDER_METADATA_SENTINEL"
 )
 
 declare -a DEFAULT_OPTIMIZE_WHITELIST_PATTERNS=(
-    "check_brew_updates"
-    "check_brew_health"
-    "check_touchid"
+    "check_linux_updates"
+    "check_firewall"
     "check_git_config"
 )
 
