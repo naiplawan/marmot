@@ -1,0 +1,291 @@
+#!/bin/bash
+# marmot - File Operations
+# Safe file and directory manipulation with validation
+
+set -euo pipefail
+
+# Prevent multiple sourcing
+if [[ -n "${marmot_FILE_OPS_LOADED:-}" ]]; then
+    return 0
+fi
+readonly marmot_FILE_OPS_LOADED=1
+
+# Ensure dependencies are loaded
+_marmot_CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -z "${marmot_BASE_LOADED:-}" ]]; then
+    # shellcheck source=lib/core/base.sh
+    source "$_marmot_CORE_DIR/base.sh"
+fi
+if [[ -z "${marmot_LOG_LOADED:-}" ]]; then
+    # shellcheck source=lib/core/log.sh
+    source "$_marmot_CORE_DIR/log.sh"
+fi
+if [[ -z "${marmot_TIMEOUT_LOADED:-}" ]]; then
+    # shellcheck source=lib/core/timeout.sh
+    source "$_marmot_CORE_DIR/timeout.sh"
+fi
+
+# ============================================================================
+# Path Validation
+# ============================================================================
+
+# Validate path for deletion operations
+# Checks: non-empty, absolute, no traversal, no control chars, not system dir
+#
+# Args: $1 - path to validate
+# Returns: 0 if safe, 1 if unsafe
+validate_path_for_deletion() {
+    local path="$1"
+
+    # Check path is not empty
+    if [[ -z "$path" ]]; then
+        log_error "Path validation failed: empty path"
+        return 1
+    fi
+
+    # Check path is absolute
+    if [[ "$path" != /* ]]; then
+        log_error "Path validation failed: path must be absolute: $path"
+        return 1
+    fi
+
+    # Check for path traversal attempts
+    if [[ "$path" =~ \.\. ]]; then
+        log_error "Path validation failed: path traversal not allowed: $path"
+        return 1
+    fi
+
+    # Check path doesn't contain dangerous characters
+    if [[ "$path" =~ [[:cntrl:]] ]] || [[ "$path" =~ $'\n' ]]; then
+        log_error "Path validation failed: contains control characters: $path"
+        return 1
+    fi
+
+    # Check path isn't critical system directory
+    case "$path" in
+        / | /bin | /sbin | /usr | /usr/bin | /usr/sbin | /etc | /var | /System | /System/* | /Library/Extensions)
+            log_error "Path validation failed: critical system directory: $path"
+            return 1
+            ;;
+    esac
+
+    return 0
+}
+
+# ============================================================================
+# Safe Removal Operations
+# ============================================================================
+
+# Safe wrapper around rm -rf with path validation
+#
+# Args:
+#   $1 - path to remove
+#   $2 - silent mode (optional, default: false)
+#
+# Returns: 0 on success, 1 on failure
+safe_remove() {
+    local path="$1"
+    local silent="${2:-false}"
+
+    # Validate path
+    if ! validate_path_for_deletion "$path"; then
+        return 1
+    fi
+
+    # Check if path exists
+    if [[ ! -e "$path" ]]; then
+        return 0
+    fi
+
+    debug_log "Removing: $path"
+
+    # Perform the deletion
+    if rm -rf "$path" 2> /dev/null; then # SAFE: safe_remove implementation
+        return 0
+    else
+        [[ "$silent" != "true" ]] && log_error "Failed to remove: $path"
+        return 1
+    fi
+}
+
+# Safe sudo remove with additional symlink protection
+#
+# Args: $1 - path to remove
+# Returns: 0 on success, 1 on failure
+safe_sudo_remove() {
+    local path="$1"
+
+    # Validate path
+    if ! validate_path_for_deletion "$path"; then
+        log_error "Path validation failed for sudo remove: $path"
+        return 1
+    fi
+
+    # Check if path exists
+    if [[ ! -e "$path" ]]; then
+        return 0
+    fi
+
+    # Additional check: reject symlinks for sudo operations
+    if [[ -L "$path" ]]; then
+        log_error "Refusing to sudo remove symlink: $path"
+        return 1
+    fi
+
+    debug_log "Removing (sudo): $path"
+
+    # Perform the deletion
+    if sudo rm -rf "$path" 2> /dev/null; then # SAFE: safe_sudo_remove implementation
+        return 0
+    else
+        log_error "Failed to remove (sudo): $path"
+        return 1
+    fi
+}
+
+# ============================================================================
+# Safe Find and Delete Operations
+# ============================================================================
+
+# Safe find delete with depth limit and validation
+#
+# Args:
+#   $1 - base directory
+#   $2 - file pattern (e.g., "*.log")
+#   $3 - age in days (0 = all files, default: 7)
+#   $4 - type filter ("f" or "d", default: "f")
+#
+# Returns: 0 on success, 1 on failure
+safe_find_delete() {
+    local base_dir="$1"
+    local pattern="$2"
+    local age_days="${3:-7}"
+    local type_filter="${4:-f}"
+
+    # Validate base directory exists and is not a symlink
+    if [[ ! -d "$base_dir" ]]; then
+        log_error "Directory does not exist: $base_dir"
+        return 1
+    fi
+
+    if [[ -L "$base_dir" ]]; then
+        log_error "Refusing to search symlinked directory: $base_dir"
+        return 1
+    fi
+
+    # Validate type filter
+    if [[ "$type_filter" != "f" && "$type_filter" != "d" ]]; then
+        log_error "Invalid type filter: $type_filter (must be 'f' or 'd')"
+        return 1
+    fi
+
+    debug_log "Finding in $base_dir: $pattern (age: ${age_days}d, type: $type_filter)"
+
+    # Execute find with safety limits (maxdepth 5 covers most app cache structures)
+    if [[ "$age_days" -eq 0 ]]; then
+        # Delete all matching files without time restriction
+        command find "$base_dir" \
+            -maxdepth 5 \
+            -name "$pattern" \
+            -type "$type_filter" \
+            -delete 2> /dev/null || true
+    else
+        # Delete files older than age_days
+        command find "$base_dir" \
+            -maxdepth 5 \
+            -name "$pattern" \
+            -type "$type_filter" \
+            -mtime "+$age_days" \
+            -delete 2> /dev/null || true
+    fi
+
+    return 0
+}
+
+# Safe sudo find delete (same as safe_find_delete but with sudo)
+#
+# Args: same as safe_find_delete
+# Returns: 0 on success, 1 on failure
+safe_sudo_find_delete() {
+    local base_dir="$1"
+    local pattern="$2"
+    local age_days="${3:-7}"
+    local type_filter="${4:-f}"
+
+    # Validate base directory
+    if [[ ! -d "$base_dir" ]]; then
+        log_error "Directory does not exist: $base_dir"
+        return 1
+    fi
+
+    if [[ -L "$base_dir" ]]; then
+        log_error "Refusing to search symlinked directory: $base_dir"
+        return 1
+    fi
+
+    # Validate type filter
+    if [[ "$type_filter" != "f" && "$type_filter" != "d" ]]; then
+        log_error "Invalid type filter: $type_filter (must be 'f' or 'd')"
+        return 1
+    fi
+
+    debug_log "Finding (sudo) in $base_dir: $pattern (age: ${age_days}d, type: $type_filter)"
+
+    # Execute find with sudo
+    if [[ "$age_days" -eq 0 ]]; then
+        sudo find "$base_dir" \
+            -maxdepth 5 \
+            -name "$pattern" \
+            -type "$type_filter" \
+            -delete 2> /dev/null || true
+    else
+        sudo find "$base_dir" \
+            -maxdepth 5 \
+            -name "$pattern" \
+            -type "$type_filter" \
+            -mtime "+$age_days" \
+            -delete 2> /dev/null || true
+    fi
+
+    return 0
+}
+
+# ============================================================================
+# Size Calculation
+# ============================================================================
+
+# Get path size in kilobytes
+# Uses timeout protection to prevent du from hanging on large directories
+#
+# Args: $1 - path
+# Returns: size in KB (0 if path doesn't exist)
+get_path_size_kb() {
+    local path="$1"
+    [[ -z "$path" || ! -e "$path" ]] && {
+        echo "0"
+        return
+    }
+    # Direct execution without timeout overhead - critical for performance in loops
+    local size
+    size=$(command du -sk "$path" 2> /dev/null | awk '{print $1}')
+    echo "${size:-0}"
+}
+
+# Calculate total size of multiple paths
+#
+# Args: $1 - newline-separated list of paths
+# Returns: total size in KB
+calculate_total_size() {
+    local files="$1"
+    local total_kb=0
+
+    while IFS= read -r file; do
+        if [[ -n "$file" && -e "$file" ]]; then
+            local size_kb
+            size_kb=$(get_path_size_kb "$file")
+            ((total_kb += size_kb))
+        fi
+    done <<< "$files"
+
+    echo "$total_kb"
+}

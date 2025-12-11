@@ -1,0 +1,327 @@
+package main
+
+import (
+	"context"
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
+	"github.com/cespare/xxhash/v2"
+)
+
+type overviewSizeSnapshot struct {
+	Size    int64     `json:"size"`
+	Updated time.Time `json:"updated"`
+}
+
+var (
+	overviewSnapshotMu     sync.Mutex
+	overviewSnapshotCache  map[string]overviewSizeSnapshot
+	overviewSnapshotLoaded bool
+)
+
+func snapshotFromModel(m model) historyEntry {
+	return historyEntry{
+		Path:          m.path,
+		Entries:       cloneDirEntries(m.entries),
+		LargeFiles:    cloneFileEntries(m.largeFiles),
+		TotalSize:     m.totalSize,
+		Selected:      m.selected,
+		EntryOffset:   m.offset,
+		LargeSelected: m.largeSelected,
+		LargeOffset:   m.largeOffset,
+		IsOverview:    m.isOverview,
+	}
+}
+
+func cacheSnapshot(m model) historyEntry {
+	entry := snapshotFromModel(m)
+	entry.Dirty = false
+	return entry
+}
+
+func cloneDirEntries(entries []dirEntry) []dirEntry {
+	if len(entries) == 0 {
+		return nil
+	}
+	copied := make([]dirEntry, len(entries))
+	copy(copied, entries)
+	return copied
+}
+
+func cloneFileEntries(files []fileEntry) []fileEntry {
+	if len(files) == 0 {
+		return nil
+	}
+	copied := make([]fileEntry, len(files))
+	copy(copied, files)
+	return copied
+}
+
+func ensureOverviewSnapshotCacheLocked() error {
+	if overviewSnapshotLoaded {
+		return nil
+	}
+	storePath, err := getOverviewSizeStorePath()
+	if err != nil {
+		return err
+	}
+	data, err := os.ReadFile(storePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			overviewSnapshotCache = make(map[string]overviewSizeSnapshot)
+			overviewSnapshotLoaded = true
+			return nil
+		}
+		return err
+	}
+	if len(data) == 0 {
+		overviewSnapshotCache = make(map[string]overviewSizeSnapshot)
+		overviewSnapshotLoaded = true
+		return nil
+	}
+	var snapshots map[string]overviewSizeSnapshot
+	if err := json.Unmarshal(data, &snapshots); err != nil || snapshots == nil {
+		backupPath := storePath + ".corrupt"
+		_ = os.Rename(storePath, backupPath)
+		overviewSnapshotCache = make(map[string]overviewSizeSnapshot)
+		overviewSnapshotLoaded = true
+		return nil
+	}
+	overviewSnapshotCache = snapshots
+	overviewSnapshotLoaded = true
+	return nil
+}
+
+func getOverviewSizeStorePath() (string, error) {
+	cacheDir, err := getCacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cacheDir, overviewCacheFile), nil
+}
+
+func loadStoredOverviewSize(path string) (int64, error) {
+	if path == "" {
+		return 0, fmt.Errorf("empty path")
+	}
+	overviewSnapshotMu.Lock()
+	defer overviewSnapshotMu.Unlock()
+	if err := ensureOverviewSnapshotCacheLocked(); err != nil {
+		return 0, err
+	}
+	if overviewSnapshotCache == nil {
+		return 0, fmt.Errorf("snapshot cache unavailable")
+	}
+	if snapshot, ok := overviewSnapshotCache[path]; ok && snapshot.Size > 0 {
+		if time.Since(snapshot.Updated) < overviewCacheTTL {
+			return snapshot.Size, nil
+		}
+		return 0, fmt.Errorf("snapshot expired")
+	}
+	return 0, fmt.Errorf("snapshot not found")
+}
+
+func storeOverviewSize(path string, size int64) error {
+	if path == "" || size <= 0 {
+		return fmt.Errorf("invalid overview size")
+	}
+	overviewSnapshotMu.Lock()
+	defer overviewSnapshotMu.Unlock()
+	if err := ensureOverviewSnapshotCacheLocked(); err != nil {
+		return err
+	}
+	if overviewSnapshotCache == nil {
+		overviewSnapshotCache = make(map[string]overviewSizeSnapshot)
+	}
+	overviewSnapshotCache[path] = overviewSizeSnapshot{
+		Size:    size,
+		Updated: time.Now(),
+	}
+	return persistOverviewSnapshotLocked()
+}
+
+func persistOverviewSnapshotLocked() error {
+	storePath, err := getOverviewSizeStorePath()
+	if err != nil {
+		return err
+	}
+	tmpPath := storePath + ".tmp"
+	data, err := json.MarshalIndent(overviewSnapshotCache, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, storePath)
+}
+
+func loadOverviewCachedSize(path string) (int64, error) {
+	if path == "" {
+		return 0, fmt.Errorf("empty path")
+	}
+	if snapshot, err := loadStoredOverviewSize(path); err == nil {
+		return snapshot, nil
+	}
+	cacheEntry, err := loadCacheFromDisk(path)
+	if err != nil {
+		return 0, err
+	}
+	_ = storeOverviewSize(path, cacheEntry.TotalSize)
+	return cacheEntry.TotalSize, nil
+}
+
+func getCacheDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	cacheDir := filepath.Join(home, ".cache", "marmot")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return "", err
+	}
+	return cacheDir, nil
+}
+
+func getCachePath(path string) (string, error) {
+	cacheDir, err := getCacheDir()
+	if err != nil {
+		return "", err
+	}
+	hash := xxhash.Sum64String(path)
+	filename := fmt.Sprintf("%x.cache", hash)
+	return filepath.Join(cacheDir, filename), nil
+}
+
+func loadCacheFromDisk(path string) (*cacheEntry, error) {
+	cachePath, err := getCachePath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := os.Open(cachePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var entry cacheEntry
+	decoder := gob.NewDecoder(file)
+	if err := decoder.Decode(&entry); err != nil {
+		return nil, err
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if info.ModTime().After(entry.ModTime) {
+		// Only expire cache if the directory has been newer for longer than the grace window.
+		if cacheModTimeGrace <= 0 || info.ModTime().Sub(entry.ModTime) > cacheModTimeGrace {
+			return nil, fmt.Errorf("cache expired: directory modified")
+		}
+	}
+
+	if time.Since(entry.ScanTime) > 7*24*time.Hour {
+		return nil, fmt.Errorf("cache expired: too old")
+	}
+
+	return &entry, nil
+}
+
+func saveCacheToDisk(path string, result scanResult) error {
+	cachePath, err := getCachePath(path)
+	if err != nil {
+		return err
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	entry := cacheEntry{
+		Entries:    result.Entries,
+		LargeFiles: result.LargeFiles,
+		TotalSize:  result.TotalSize,
+		ModTime:    info.ModTime(),
+		ScanTime:   time.Now(),
+	}
+
+	file, err := os.Create(cachePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := gob.NewEncoder(file)
+	return encoder.Encode(entry)
+}
+
+func invalidateCache(path string) {
+	cachePath, err := getCachePath(path)
+	if err == nil {
+		_ = os.Remove(cachePath)
+	}
+	removeOverviewSnapshot(path)
+}
+
+func removeOverviewSnapshot(path string) {
+	if path == "" {
+		return
+	}
+	overviewSnapshotMu.Lock()
+	defer overviewSnapshotMu.Unlock()
+	if err := ensureOverviewSnapshotCacheLocked(); err != nil {
+		return
+	}
+	if overviewSnapshotCache == nil {
+		return
+	}
+	if _, ok := overviewSnapshotCache[path]; ok {
+		delete(overviewSnapshotCache, path)
+		_ = persistOverviewSnapshotLocked()
+	}
+}
+
+// prefetchOverviewCache scans overview directories in background
+// to populate cache for faster overview mode access
+func prefetchOverviewCache(ctx context.Context) {
+	entries := createOverviewEntries()
+
+	// Check which entries need refresh
+	var needScan []string
+	for _, entry := range entries {
+		// Skip if we have fresh cache
+		if size, err := loadStoredOverviewSize(entry.Path); err == nil && size > 0 {
+			continue
+		}
+		needScan = append(needScan, entry.Path)
+	}
+
+	// Nothing to scan
+	if len(needScan) == 0 {
+		return
+	}
+
+	// Scan and cache in background with context cancellation support
+	for _, path := range needScan {
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		size, err := measureOverviewSize(path)
+		if err == nil && size > 0 {
+			_ = storeOverviewSize(path, size)
+		}
+	}
+}

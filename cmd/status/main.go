@@ -1,0 +1,140 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+const refreshInterval = time.Second
+
+var (
+	Version   = "dev"
+	BuildTime = ""
+)
+
+type tickMsg struct{}
+type animTickMsg struct{}
+
+type metricsMsg struct {
+	data MetricsSnapshot
+	err  error
+}
+
+type model struct {
+	collector   *Collector
+	width       int
+	height      int
+	metrics     MetricsSnapshot
+	errMessage  string
+	ready       bool
+	lastUpdated time.Time
+	collecting  bool
+	animFrame   int
+}
+
+func newModel() model {
+	return model{
+		collector: NewCollector(),
+	}
+}
+
+func (m model) Init() tea.Cmd {
+	return tea.Batch(tickAfter(0), animTick())
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "esc", "ctrl+c":
+			return m, tea.Quit
+		}
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
+	case tickMsg:
+		if m.collecting {
+			return m, nil
+		}
+		m.collecting = true
+		return m, m.collectCmd()
+	case metricsMsg:
+		if msg.err != nil {
+			m.errMessage = msg.err.Error()
+		} else {
+			m.errMessage = ""
+		}
+		m.metrics = msg.data
+		m.lastUpdated = msg.data.CollectedAt
+		m.collecting = false
+		// Mark ready after first successful data collection
+		if !m.ready {
+			m.ready = true
+		}
+		return m, tickAfter(refreshInterval)
+	case animTickMsg:
+		m.animFrame++
+		return m, animTickWithSpeed(m.metrics.CPU.Usage)
+	}
+	return m, nil
+}
+
+func (m model) View() string {
+	if !m.ready {
+		return "Loading..."
+	}
+
+	header := renderHeader(m.metrics, m.errMessage, m.animFrame, m.width)
+	cardWidth := 0
+	if m.width > 80 {
+		cardWidth = maxInt(24, m.width/2-4)
+	}
+	cards := buildCards(m.metrics, cardWidth)
+
+	if m.width <= 80 {
+		var rendered []string
+		for _, c := range cards {
+			rendered = append(rendered, renderCard(c, cardWidth, 0))
+		}
+		return header + "\n" + lipgloss.JoinVertical(lipgloss.Left, rendered...)
+	}
+
+	return header + "\n" + renderTwoColumns(cards, m.width)
+}
+
+func (m model) collectCmd() tea.Cmd {
+	return func() tea.Msg {
+		data, err := m.collector.Collect()
+		return metricsMsg{data: data, err: err}
+	}
+}
+
+func tickAfter(delay time.Duration) tea.Cmd {
+	return tea.Tick(delay, func(time.Time) tea.Msg { return tickMsg{} })
+}
+
+func animTick() tea.Cmd {
+	return tea.Tick(200*time.Millisecond, func(time.Time) tea.Msg { return animTickMsg{} })
+}
+
+func animTickWithSpeed(cpuUsage float64) tea.Cmd {
+	// Higher CPU = faster animation (50ms to 300ms)
+	interval := 300 - int(cpuUsage*2.5)
+	if interval < 50 {
+		interval = 50
+	}
+	return tea.Tick(time.Duration(interval)*time.Millisecond, func(time.Time) tea.Msg { return animTickMsg{} })
+}
+
+func main() {
+	p := tea.NewProgram(newModel(), tea.WithAltScreen())
+	if err := p.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "system status error: %v\n", err)
+		os.Exit(1)
+	}
+}

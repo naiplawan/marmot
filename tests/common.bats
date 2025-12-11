@@ -1,0 +1,184 @@
+#!/usr/bin/env bats
+
+setup_file() {
+    PROJECT_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
+    export PROJECT_ROOT
+
+    ORIGINAL_HOME="${HOME:-}"
+    export ORIGINAL_HOME
+
+    HOME="$(mktemp -d "${BATS_TEST_DIRNAME}/tmp-home.XXXXXX")"
+    export HOME
+
+    mkdir -p "$HOME"
+}
+
+teardown_file() {
+    rm -rf "$HOME"
+    if [[ -n "${ORIGINAL_HOME:-}" ]]; then
+        export HOME="$ORIGINAL_HOME"
+    fi
+}
+
+setup() {
+    rm -rf "$HOME/.config"
+    mkdir -p "$HOME"
+}
+
+teardown() {
+    unset MO_SPINNER_CHARS || true
+}
+
+@test "mo_spinner_chars returns default sequence when unset" {
+    result="$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; mo_spinner_chars")"
+    [ "$result" = "|/-\\" ]
+}
+
+@test "mo_spinner_chars respects MO_SPINNER_CHARS override" {
+    export MO_SPINNER_CHARS="abcd"
+    result="$(HOME="$HOME" MO_SPINNER_CHARS="$MO_SPINNER_CHARS" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; mo_spinner_chars")"
+    [ "$result" = "abcd" ]
+}
+
+@test "detect_architecture maps current CPU to friendly label" {
+    expected="Intel"
+    if [[ "$(uname -m)" == "arm64" ]]; then
+        expected="Apple Silicon"
+    fi
+    result="$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; detect_architecture")"
+    [ "$result" = "$expected" ]
+}
+
+@test "get_free_space returns a non-empty value" {
+    result="$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; get_free_space")"
+    [[ -n "$result" ]]
+}
+
+@test "log_info prints message and appends to log file" {
+    local message="Informational message from test"
+    local stdout_output
+    stdout_output="$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; log_info '$message'")"
+    [[ "$stdout_output" == *"$message"* ]]
+
+    local log_file="$HOME/.config/marmot/marmot.log"
+    [[ -f "$log_file" ]]
+    grep -q "INFO: $message" "$log_file"
+}
+
+@test "log_error writes to stderr and log file" {
+    local message="Something went wrong"
+    local stderr_file="$HOME/log_error_stderr.txt"
+
+    HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; log_error '$message' 1>/dev/null 2>'$stderr_file'"
+
+    [[ -s "$stderr_file" ]]
+    grep -q "$message" "$stderr_file"
+
+    local log_file="$HOME/.config/marmot/marmot.log"
+    [[ -f "$log_file" ]]
+    grep -q "ERROR: $message" "$log_file"
+}
+
+@test "rotate_log_once only checks log size once per session" {
+    # Create a log file exceeding the max size
+    local log_file="$HOME/.config/marmot/marmot.log"
+    mkdir -p "$(dirname "$log_file")"
+    dd if=/dev/zero of="$log_file" bs=1024 count=1100 2> /dev/null
+
+    # First call should rotate
+    HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'"
+    [[ -f "${log_file}.old" ]]
+
+    # Verify marmot_LOG_ROTATED was set (rotation happened)
+    result=$(HOME="$HOME" marmot_LOG_ROTATED=1 bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; echo \$marmot_LOG_ROTATED")
+    [[ "$result" == "1" ]]
+}
+
+@test "drain_pending_input clears stdin buffer" {
+    # Test that drain_pending_input doesn't hang (using background job with timeout)
+    result=$(
+        (echo -e "test\ninput" | HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; drain_pending_input; echo done") &
+        pid=$!
+        sleep 2
+        if kill -0 "$pid" 2> /dev/null; then
+            kill "$pid" 2> /dev/null || true
+            wait "$pid" 2> /dev/null || true
+            echo "timeout"
+        else
+            wait "$pid" 2> /dev/null || true
+        fi
+    )
+    [[ "$result" == "done" ]]
+}
+
+@test "bytes_to_human converts byte counts into readable units" {
+    output="$(
+        HOME="$HOME" bash --noprofile --norc << 'EOF'
+source "$PROJECT_ROOT/lib/core/common.sh"
+bytes_to_human 512
+bytes_to_human 2048
+bytes_to_human $((5 * 1024 * 1024))
+bytes_to_human $((3 * 1024 * 1024 * 1024))
+EOF
+    )"
+
+    bytes_lines=()
+    while IFS= read -r line; do
+        bytes_lines+=("$line")
+    done <<< "$output"
+
+    [ "${bytes_lines[0]}" = "512B" ]
+    [ "${bytes_lines[1]}" = "2KB" ]
+    [ "${bytes_lines[2]}" = "5.0MB" ]
+    [ "${bytes_lines[3]}" = "3.00GB" ]
+}
+
+@test "create_temp_file and create_temp_dir are tracked and cleaned" {
+    HOME="$HOME" bash --noprofile --norc << 'EOF'
+source "$PROJECT_ROOT/lib/core/common.sh"
+create_temp_file > "$HOME/temp_file_path.txt"
+create_temp_dir > "$HOME/temp_dir_path.txt"
+cleanup_temp_files
+EOF
+
+    file_path="$(cat "$HOME/temp_file_path.txt")"
+    dir_path="$(cat "$HOME/temp_dir_path.txt")"
+    [ ! -e "$file_path" ]
+    [ ! -e "$dir_path" ]
+    rm -f "$HOME/temp_file_path.txt" "$HOME/temp_dir_path.txt"
+}
+
+
+@test "should_protect_data protects system and critical apps" {
+    # System apps should be protected
+    result=$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; should_protect_data 'com.apple.Safari' && echo 'protected' || echo 'not-protected'")
+    [ "$result" = "protected" ]
+
+    # Critical network apps should be protected
+    result=$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; should_protect_data 'com.clash.app' && echo 'protected' || echo 'not-protected'")
+    [ "$result" = "protected" ]
+
+    # Regular apps should not be protected
+    result=$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; should_protect_data 'com.example.RegularApp' && echo 'protected' || echo 'not-protected'")
+    [ "$result" = "not-protected" ]
+}
+
+@test "print_summary_block formats output correctly" {
+    result=$(HOME="$HOME" bash --noprofile --norc -c "source '$PROJECT_ROOT/lib/core/common.sh'; print_summary_block 'success' 'Test Summary' 'Detail 1' 'Detail 2'")
+    [[ "$result" == *"Test Summary"* ]]
+    [[ "$result" == *"Detail 1"* ]]
+    [[ "$result" == *"Detail 2"* ]]
+}
+
+@test "start_inline_spinner and stop_inline_spinner work in non-TTY" {
+    # Should not hang in non-interactive mode
+    result=$(HOME="$HOME" bash --noprofile --norc << 'EOF'
+source "$PROJECT_ROOT/lib/core/common.sh"
+marmot_SPINNER_PREFIX="  " start_inline_spinner "Testing..."
+sleep 0.1
+stop_inline_spinner
+echo "done"
+EOF
+)
+    [[ "$result" == *"done"* ]]
+}

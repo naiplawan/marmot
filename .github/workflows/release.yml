@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'V*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.6"
+          cache: true
+
+      - name: Build Universal Binary for disk analyzer
+        run: ./scripts/build-analyze.sh
+
+      - name: Build Universal Binary for system status
+        run: ./scripts/build-status.sh
+
+      - name: Verify binary is valid
+        run: |
+          if [[ ! -x bin/analyze-go ]]; then
+            echo "Error: bin/analyze-go is not executable"
+            exit 1
+          fi
+          if [[ ! -x bin/status-go ]]; then
+            echo "Error: bin/status-go is not executable"
+            exit 1
+          fi
+          echo "Binary info:"
+          file bin/analyze-go
+          ls -lh bin/analyze-go
+          file bin/status-go
+          ls -lh bin/status-go
+          echo ""
+          echo "✓ Universal binary built successfully"
+
+      - name: Commit binaries for release
+        run: |
+          git config user.name "Bot"
+          git config user.email "noreply@github.com"
+          git add bin/analyze-go bin/status-go
+          if git diff --staged --quiet; then
+            echo "No binary changes to commit"
+          else
+            git commit -m "chore: update binaries for ${GITHUB_REF#refs/tags/}"
+            git push origin HEAD:main
+          fi
+
+  update-formula:
+    runs-on: ubuntu-latest
+    needs: build-release
+    steps:
+      - name: Extract version from tag
+        id: tag_version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#V}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION (tag: $TAG)"
+
+      - name: Update Homebrew formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: marmot
+          formula-path: Formula/marmot.rb
+          homebrew-tap: tw93/homebrew-tap
+          tag-name: ${{ steps.tag_version.outputs.tag }}
+          commit-message: |
+            marmot ${{ steps.tag_version.outputs.version }}
+
+            Automated release via GitHub Actions
+        env:
+          COMMITTER_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Verify formula update
+        if: success()
+        run: |
+          echo "✓ Homebrew formula updated successfully"
+          echo "  Version: ${{ steps.tag_version.outputs.version }}"
+          echo "  Tag: ${{ steps.tag_version.outputs.tag }}"

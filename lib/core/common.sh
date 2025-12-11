@@ -1,0 +1,165 @@
+#!/bin/bash
+# marmot - Common Functions Library
+# Main entry point that loads all core modules
+
+set -euo pipefail
+
+# Prevent multiple sourcing
+if [[ -n "${marmot_COMMON_LOADED:-}" ]]; then
+    return 0
+fi
+readonly marmot_COMMON_LOADED=1
+
+_marmot_CORE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load core modules in dependency order
+source "$_marmot_CORE_DIR/base.sh"
+source "$_marmot_CORE_DIR/log.sh"
+source "$_marmot_CORE_DIR/timeout.sh"
+source "$_marmot_CORE_DIR/file_ops.sh"
+source "$_marmot_CORE_DIR/ui.sh"
+source "$_marmot_CORE_DIR/app_protection.sh"
+
+# Load sudo management if available
+if [[ -f "$_marmot_CORE_DIR/sudo.sh" ]]; then
+    source "$_marmot_CORE_DIR/sudo.sh"
+fi
+
+# Update marmot via Homebrew
+# Args: $1 = current version
+update_via_homebrew() {
+    local current_version="$1"
+
+    if [[ -t 1 ]]; then
+        start_inline_spinner "Updating Homebrew..."
+    else
+        echo "Updating Homebrew..."
+    fi
+    brew update 2>&1 | grep -Ev "^(==>|Already up-to-date)" || true
+    if [[ -t 1 ]]; then
+        stop_inline_spinner
+    fi
+
+    if [[ -t 1 ]]; then
+        start_inline_spinner "Upgrading marmot..."
+    else
+        echo "Upgrading marmot..."
+    fi
+    local upgrade_output
+    upgrade_output=$(brew upgrade marmot 2>&1) || true
+    if [[ -t 1 ]]; then
+        stop_inline_spinner
+    fi
+
+    if echo "$upgrade_output" | grep -q "already installed"; then
+        local installed_version
+        installed_version=$(brew list --versions marmot 2> /dev/null | awk '{print $2}')
+        echo ""
+        echo -e "${GREEN}${ICON_SUCCESS}${NC} Already on latest version (${installed_version:-$current_version})"
+        echo ""
+    elif echo "$upgrade_output" | grep -q "Error:"; then
+        log_error "Homebrew upgrade failed"
+        echo "$upgrade_output" | grep "Error:" >&2
+        return 1
+    else
+        echo "$upgrade_output" | grep -Ev "^(==>|Updating Homebrew|Warning:)" || true
+        local new_version
+        new_version=$(brew list --versions marmot 2> /dev/null | awk '{print $2}')
+        echo ""
+        echo -e "${GREEN}${ICON_SUCCESS}${NC} Updated to latest version (${new_version:-$current_version})"
+        echo ""
+    fi
+
+    # Clear update cache
+    rm -f "$HOME/.cache/marmot/version_check" "$HOME/.cache/marmot/update_message" 2> /dev/null || true
+}
+
+# Remove apps from Dock
+# Args: app paths to remove
+remove_apps_from_dock() {
+    if [[ $# -eq 0 ]]; then
+        return 0
+    fi
+
+    local plist="$HOME/Library/Preferences/com.apple.dock.plist"
+    [[ -f "$plist" ]] || return 0
+
+    if ! command -v python3 > /dev/null 2>&1; then
+        return 0
+    fi
+
+    # Execute Python helper to prune dock entries for the given app paths
+    python3 - "$@" << 'PY' 2> /dev/null || return 0
+import os
+import plistlib
+import subprocess
+import sys
+import urllib.parse
+
+plist_path = os.path.expanduser('~/Library/Preferences/com.apple.dock.plist')
+if not os.path.exists(plist_path):
+    sys.exit(0)
+
+def normalise(path):
+    if not path:
+        return ''
+    return os.path.normpath(os.path.realpath(path.rstrip('/')))
+
+targets = {normalise(arg) for arg in sys.argv[1:] if arg}
+targets = {t for t in targets if t}
+if not targets:
+    sys.exit(0)
+
+with open(plist_path, 'rb') as fh:
+    try:
+        data = plistlib.load(fh)
+    except Exception:
+        sys.exit(0)
+
+apps = data.get('persistent-apps')
+if not isinstance(apps, list):
+    sys.exit(0)
+
+changed = False
+filtered = []
+for item in apps:
+    try:
+        url = item['tile-data']['file-data']['_CFURLString']
+    except (KeyError, TypeError):
+        filtered.append(item)
+        continue
+
+    if not isinstance(url, str):
+        filtered.append(item)
+        continue
+
+    parsed = urllib.parse.urlparse(url)
+    path = urllib.parse.unquote(parsed.path or '')
+    if not path:
+        filtered.append(item)
+        continue
+
+    candidate = normalise(path)
+    if any(candidate == t or candidate.startswith(t + os.sep) for t in targets):
+        changed = True
+        continue
+
+    filtered.append(item)
+
+if not changed:
+    sys.exit(0)
+
+data['persistent-apps'] = filtered
+with open(plist_path, 'wb') as fh:
+    try:
+        plistlib.dump(data, fh, fmt=plistlib.FMT_BINARY)
+    except Exception:
+        plistlib.dump(data, fh)
+
+# Restart Dock to apply changes
+try:
+    subprocess.run(['killall', 'Dock'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+except Exception:
+    pass
+PY
+}

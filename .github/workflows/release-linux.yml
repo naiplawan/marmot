@@ -1,0 +1,153 @@
+name: Linux Release
+
+on:
+  push:
+    tags:
+      - 'VL-*'  # Linux releases use VL- prefix to distinguish from macOS V- tags
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.6"
+          cache: true
+
+      - name: Build Linux binaries for ${{ matrix.arch }}
+        run: |
+          # Build disk analyzer
+          ./scripts/build-analyze-linux.sh ${{ matrix.arch }}
+
+          # Build system status
+          ./scripts/build-status-linux.sh ${{ matrix.arch }}
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp bin/analyze-go-linux-${{ matrix.arch }} release/
+          cp bin/status-go-linux-${{ matrix.arch }} release/
+          cp marmot release/
+          cp README.md release/
+          cp install.sh release/
+          cp -r lib release/
+          cp -r bin/*.sh release/
+
+          # Create tarball
+          cd release
+          tar -czf marmot-linux-${{ matrix.arch }}.tar.gz *
+          cd ..
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            release/marmot-linux-${{ matrix.arch }}.tar.gz
+            bin/analyze-go-linux-${{ matrix.arch }}
+            bin/status-go-linux-${{ matrix.arch }}
+          name: Linux Release ${{ github.ref_name }}
+          body: |
+            ## marmot Linux Release ${{ github.ref_name }}
+
+            ### Installation
+            ```bash
+            # Download the appropriate binary
+            wget https://github.com/tw93/marmot/releases/download/${{ github.ref_name }}/marmot-linux-${{ matrix.arch }}.tar.gz
+
+            # Extract and install
+            tar -xzf marmot-linux-${{ matrix.arch }}.tar.gz
+            sudo cp marmot /usr/local/bin/
+            sudo chmod +x /usr/local/bin/marmot
+
+            # Or run from extracted directory
+            ./marmot --help
+            ```
+
+            ### Requirements
+            - Ubuntu 20.04 or later
+            - Go 1.24+ (if building from source)
+            - Standard Linux utilities (bash, coreutils, find, etc.)
+
+            ### Architecture
+            - `amd64`: For Intel/AMD 64-bit systems
+            - `arm64`: For ARM 64-bit systems (e.g., Raspberry Pi 4, AWS Graviton)
+
+            #### Features
+            - ✅ Disk analyzer with interactive TUI
+            - ✅ System status monitoring
+            - ✅ Cache cleanup
+            - ✅ Application uninstaller
+            - ⚠️ Some features still in beta for Linux
+
+            #### Known Limitations
+            - No Touch ID support (Linux-specific)
+            - No Dock/Finder integration (macOS-specific)
+            - GPU monitoring limited to NVIDIA/AMD
+
+  create-deb:
+    runs-on: ubuntu-latest
+    needs: build-release
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build Debian package
+        run: |
+          # Create DEB package structure
+          mkdir -p marmot-deb/DEBIAN
+          mkdir -p marmot-deb/usr/local/bin
+          mkdir -p marmot-deb/usr/local/lib/marmot
+          mkdir -p marmot-deb/usr/share/doc/marmot
+
+          # Copy files
+          cp bin/analyze-go-linux-amd64 marmot-deb/usr/local/bin/analyze-go
+          cp bin/status-go-linux-amd64 marmot-deb/usr/local/bin/status-go
+          cp marmot marmot-deb/usr/local/bin/
+          cp -r lib marmot-deb/usr/local/lib/marmot/
+          cp -r bin/*.sh marmot-deb/usr/local/bin/
+          cp README.md marmot-deb/usr/share/doc/marmot/
+          cp install.sh marmot-deb/usr/share/doc/marmot/
+
+          # Set permissions
+          chmod +x marmot-deb/usr/local/bin/*
+          chmod -R 755 marmot-deb/usr/local/lib/marmot/
+
+          # Create control file
+          cat > marmot-deb/DEBIAN/control << EOF
+          Package: marmot
+          Version: ${GITHUB_REF#refs/tags/VL-}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: bash (>= 4.0), coreutils, python3
+          Maintainer: marmot Developers <noreply@example.com>
+          Description: Terminal-based system optimization tool
+           marmot helps you clean up your system by removing
+           caches, temporary files, and unwanted applications.
+           Features a disk analyzer and system status monitoring.
+           Ported from macOS to Ubuntu/Linux.
+          EOF
+
+          # Build DEB package
+          dpkg-deb --build marmot-deb marmot_${GITHUB_REF#refs/tags/VL-}_amd64.deb
+
+      - name: Upload DEB package
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            marmot_*.deb
+          name: Linux Release ${{ github.ref_name }}
