@@ -22,8 +22,8 @@ log_error() { echo -e "${RED}${ICON_ERR}${NC} $1"; }
 detect_marmot() {
     if command -v marmot > /dev/null 2>&1; then
         command -v marmot
-    elif command -v marmotle > /dev/null 2>&1; then
-        command -v marmotle
+    elif command -v marmot > /dev/null 2>&1; then
+        command -v marmot
     else
         log_error "marmot not found. Install it first via Homebrew or ./install.sh."
         exit 1
@@ -44,7 +44,7 @@ write_raycast_script() {
 # Required parameters:
 # @raycast.schemaVersion 1
 # @raycast.title ${title}
-# @raycast.marmotde fullOutput
+# @raycast.mode fullOutput
 # @raycast.packageName marmot
 
 # Optional parameters:
@@ -217,7 +217,7 @@ echo "Run this manually:"
 echo "    ${raw_cmd}"
 exit 1
 EOF
-    chmarmotd +x "$target"
+    chmod +x "$target"
 }
 
 create_raycast_commands() {
@@ -239,11 +239,11 @@ create_raycast_commands() {
     log_step "Installing Raycast commands..."
     for dir in "${dirs[@]}"; do
         mkdir -p "$dir"
-        write_raycast_script "$dir/marmotle-clean.sh" "clean" "$marmot_bin" "clean"
-        write_raycast_script "$dir/marmotle-uninstall.sh" "uninstall" "$marmot_bin" "uninstall"
-        write_raycast_script "$dir/marmotle-optimize.sh" "optimize" "$marmot_bin" "optimize"
-        write_raycast_script "$dir/marmotle-analyze.sh" "analyze" "$marmot_bin" "analyze"
-        write_raycast_script "$dir/marmotle-status.sh" "status" "$marmot_bin" "status"
+        write_raycast_script "$dir/marmot-clean.sh" "clean" "$marmot_bin" "clean"
+        write_raycast_script "$dir/marmot-uninstall.sh" "uninstall" "$marmot_bin" "uninstall"
+        write_raycast_script "$dir/marmot-optimize.sh" "optimize" "$marmot_bin" "optimize"
+        write_raycast_script "$dir/marmot-analyze.sh" "analyze" "$marmot_bin" "analyze"
+        write_raycast_script "$dir/marmot-status.sh" "status" "$marmot_bin" "status"
         log_success "Scripts ready in: $dir"
     done
 
@@ -283,11 +283,11 @@ create_alfred_workflow() {
 
     log_step "Installing Alfred workflows..."
     local workflows=(
-        "fun.tw93.marmotle.clean|marmot clean|clean|Run marmot clean|\"${marmot_bin}\" clean"
-        "fun.tw93.marmotle.uninstall|marmot uninstall|uninstall|Uninstall apps via marmot|\"${marmot_bin}\" uninstall"
-        "fun.tw93.marmotle.optimize|marmot optimize|optimize|System health & optimization|\"${marmot_bin}\" optimize"
-        "fun.tw93.marmotle.analyze|marmot analyze|analyze|Disk space analysis|\"${marmot_bin}\" analyze"
-        "fun.tw93.marmotle.status|marmot status|status|Live system dashboard|\"${marmot_bin}\" status"
+        "fun.tw93.marmot.clean|marmot clean|clean|Run marmot clean|\"${marmot_bin}\" clean"
+        "fun.tw93.marmot.uninstall|marmot uninstall|uninstall|Uninstall apps via marmot|\"${marmot_bin}\" uninstall"
+        "fun.tw93.marmot.optimize|marmot optimize|optimize|System health & optimization|\"${marmot_bin}\" optimize"
+        "fun.tw93.marmot.analyze|marmot analyze|analyze|Disk space analysis|\"${marmot_bin}\" analyze"
+        "fun.tw93.marmot.status|marmot status|status|Live system dashboard|\"${marmot_bin}\" status"
     )
 
     for entry in "${workflows[@]}"; do
@@ -368,9 +368,9 @@ ${command}
             <dict>
                 <key>destinationuid</key>
                 <string>${action_uid}</string>
-                <key>marmotdifiers</key>
+                <key>modifiers</key>
                 <integer>0</integer>
-                <key>marmotdifiersubtext</key>
+                <key>modifiersubtext</key>
                 <string></string>
             </dict>
         </array>
@@ -404,10 +404,10 @@ main() {
     echo ""
     log_success "Done! Raycast and Alfred are ready with 5 commands:"
     echo "  • clean - Deep system cleanup"
-    echo "  • uninstall - Remarmotve applications"
+    echo "  • uninstall - Remove applications"
     echo "  • optimize - System health & tuning"
     echo "  • analyze - Disk space explorer"
-    echo "  • status - Live system marmotnitor"
+    echo "  • status - Live system monitor"
     echo ""
 }
 

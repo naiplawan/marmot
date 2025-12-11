@@ -25,22 +25,22 @@ setup() {
     mkdir -p "$HOME"
 }
 
-@test "marmotle --help prints command overview" {
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" --help
+@test "marmot --help prints command overview" {
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" --help
     [ "$status" -eq 0 ]
     [[ "$output" == *"marmot clean"* ]]
     [[ "$output" == *"marmot analyze"* ]]
 }
 
-@test "marmotle --version reports script version" {
-    expected_version="$(grep '^VERSION=' "$PROJECT_ROOT/marmotle" | head -1 | sed 's/VERSION=\"\(.*\)\"/\1/')"
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" --version
+@test "marmot --version reports script version" {
+    expected_version="$(grep '^VERSION=' "$PROJECT_ROOT/marmot" | head -1 | sed 's/VERSION=\"\(.*\)\"/\1/')"
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" --version
     [ "$status" -eq 0 ]
     [[ "$output" == *"$expected_version"* ]]
 }
 
-@test "marmotle unknown command returns error" {
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" unknown-command
+@test "marmot unknown command returns error" {
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" unknown-command
     [ "$status" -ne 0 ]
     [[ "$output" == *"Unknown command: unknown-command"* ]]
 }
@@ -48,7 +48,7 @@ setup() {
 @test "touchid status reports current configuration" {
     # Don't test actual Touch ID config (system-dependent, may trigger prompts)
     # Just verify the command exists and can run
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" touchid status
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" touchid status
     [ "$status" -eq 0 ]
     # Should output either "enabled" or "not configured" message
     [[ "$output" == *"Touch ID"* ]]
@@ -57,7 +57,7 @@ setup() {
 @test "marmot optimize command is recognized" {
     # Test that optimize command exists without actually running it
     # Running full optimize in tests is too slow (waits for sudo, runs health checks)
-    run bash -c "grep -q '\"optimize\")' '$PROJECT_ROOT/marmotle'"
+    run bash -c "grep -q '\"optimize\")' '$PROJECT_ROOT/marmot'"
     [ "$status" -eq 0 ]
 }
 

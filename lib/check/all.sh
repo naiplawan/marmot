@@ -170,7 +170,7 @@ check_all_security() {
 # ============================================================================
 
 # Cache configuration
-CACHE_DIR="${HOME}/.cache/marmotle"
+CACHE_DIR="${HOME}/.cache/marmot"
 CACHE_TTL=600 # 10 minutes in seconds
 
 # Ensure cache directory exists
@@ -190,8 +190,8 @@ reset_softwareupdate_cache() {
     SOFTWARE_UPDATE_LIST=""
 }
 
-reset_marmotle_cache() {
-    clear_cache_file "$CACHE_DIR/marmotle_version"
+reset_marmot_cache() {
+    clear_cache_file "$CACHE_DIR/marmot_version"
 }
 
 # Check if cache is still valid
@@ -373,18 +373,18 @@ check_macos_update() {
     fi
 }
 
-check_marmotle_update() {
+check_marmot_update() {
     # Check if marmot has updates
-    # Auto-detect version from marmotle main script
+    # Auto-detect version from marmot main script
     local current_version
-    if [[ -f "${SCRIPT_DIR:-/usr/local/bin}/marmotle" ]]; then
-        current_version=$(grep '^VERSION=' "${SCRIPT_DIR:-/usr/local/bin}/marmotle" 2> /dev/null | head -1 | sed 's/VERSION="\(.*\)"/\1/' || echo "unknown")
+    if [[ -f "${SCRIPT_DIR:-/usr/local/bin}/marmot" ]]; then
+        current_version=$(grep '^VERSION=' "${SCRIPT_DIR:-/usr/local/bin}/marmot" 2> /dev/null | head -1 | sed 's/VERSION="\(.*\)"/\1/' || echo "unknown")
     else
         current_version="${VERSION:-unknown}"
     fi
 
     local latest_version=""
-    local cache_file="$CACHE_DIR/marmotle_version"
+    local cache_file="$CACHE_DIR/marmot_version"
 
     export marmot_UPDATE_AVAILABLE="false"
 
@@ -399,7 +399,7 @@ check_marmotle_update() {
 
         # Try to get latest version from GitHub
         if command -v curl > /dev/null 2>&1; then
-            latest_version=$(curl -fsSL https://api.github.com/repos/naiplawan/marmotle/releases/latest 2> /dev/null | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || echo "")
+            latest_version=$(curl -fsSL https://api.github.com/repos/naiplawan/marmot/releases/latest 2> /dev/null | grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || echo "")
             # Save to cache
             if [[ -n "$latest_version" ]]; then
                 echo "$latest_version" > "$cache_file" 2> /dev/null || true
@@ -412,7 +412,7 @@ check_marmotle_update() {
         fi
     fi
 
-    # Normalize version strings (remarmotve leading 'v' or 'V')
+    # Normalize version strings (remove leading 'v' or 'V')
     current_version="${current_version#v}"
     current_version="${current_version#V}"
     latest_version="${latest_version#v}"
@@ -444,7 +444,7 @@ check_all_updates() {
 
     check_appstore_updates
     check_macos_update
-    check_marmotle_update
+    check_marmot_update
 }
 
 get_appstore_update_labels() {
@@ -494,7 +494,7 @@ check_disk_space() {
     fi
 }
 
-check_memarmotry_usage() {
+check_memory_usage() {
     local mem_total
     mem_total=$(sysctl -n hw.memsize 2> /dev/null || echo "0")
     if [[ -z "$mem_total" || "$mem_total" -le 0 ]]; then
@@ -597,7 +597,7 @@ check_login_items() {
 check_cache_size() {
     local cache_size_kb=0
 
-    # Check commarmotn cache locations
+    # Check common cache locations
     local -a cache_paths=(
         "$HOME/Library/Caches"
         "$HOME/Library/Logs"
@@ -693,7 +693,7 @@ check_brew_health() {
 
 check_system_health() {
     check_disk_space
-    check_memarmotry_usage
+    check_memory_usage
     check_swap_usage
     check_login_items
     check_cache_size

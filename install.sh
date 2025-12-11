@@ -39,7 +39,7 @@ fi; }
 # Verbosity (0 = quiet, 1 = verbose)
 VERBOSE=1
 
-# Icons (duplicated from lib/core/commarmotn.sh - necessary as install.sh runs standalone)
+# Icons (duplicated from lib/core/common.sh - necessary as install.sh runs standalone)
 readonly ICON_SUCCESS="✓"
 readonly ICON_ADMIN="●"
 readonly ICON_CONFIRM="◎"
@@ -55,7 +55,7 @@ log_confirm() { [[ ${VERBOSE} -eq 1 ]] && echo -e "${BLUE}${ICON_CONFIRM}${NC} $
 
 # Default installation directory
 INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="$HOME/.config/marmotle"
+CONFIG_DIR="$HOME/.config/marmot"
 SOURCE_DIR=""
 
 # Default action (install|update)
@@ -71,43 +71,43 @@ USAGE:
 
 OPTIONS:
     --prefix PATH       Install to custom directory (default: /usr/local/bin)
-    --config PATH       Config directory (default: ~/.config/marmotle)
+    --config PATH       Config directory (default: ~/.config/marmot)
     --update            Update marmot to the latest version
-    --uninstall         Uninstall marmotle
+    --uninstall         Uninstall marmot
     --help, -h          Show this help
 
 EXAMPLES:
     ./install.sh                    # Install to /usr/local/bin
     ./install.sh --prefix ~/.local/bin  # Install to custom directory
     ./install.sh --update           # Update marmot in place
-    ./install.sh --uninstall       # Uninstall marmotle
+    ./install.sh --uninstall       # Uninstall marmot
 
 The installer will:
-1. Copy marmotle binary and scripts to the install directory
-2. Set up config directory with all marmotdules
-3. Make the marmotle command available system-wide
+1. Copy marmot binary and scripts to the install directory
+2. Set up config directory with all modules
+3. Make the marmot command available system-wide
 EOF
     echo ""
 }
 
 # Resolve the directory containing source files (supports curl | bash)
 resolve_source_dir() {
-    if [[ -n "$SOURCE_DIR" && -d "$SOURCE_DIR" && -f "$SOURCE_DIR/marmotle" ]]; then
+    if [[ -n "$SOURCE_DIR" && -d "$SOURCE_DIR" && -f "$SOURCE_DIR/marmot" ]]; then
         return 0
     fi
 
-    # 1) If script is on disk, use its directory (only when marmotle executable present)
+    # 1) If script is on disk, use its directory (only when marmot executable present)
     if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
         local script_dir
         script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        if [[ -f "$script_dir/marmotle" ]]; then
+        if [[ -f "$script_dir/marmot" ]]; then
             SOURCE_DIR="$script_dir"
             return 0
         fi
     fi
 
     # 2) If CLEAN_SOURCE_DIR env is provided, honor it
-    if [[ -n "${CLEAN_SOURCE_DIR:-}" && -d "$CLEAN_SOURCE_DIR" && -f "$CLEAN_SOURCE_DIR/marmotle" ]]; then
+    if [[ -n "${CLEAN_SOURCE_DIR:-}" && -d "$CLEAN_SOURCE_DIR" && -f "$CLEAN_SOURCE_DIR/marmot" ]]; then
         SOURCE_DIR="$CLEAN_SOURCE_DIR"
         return 0
     fi
@@ -120,12 +120,12 @@ resolve_source_dir() {
 
     start_line_spinner "Fetching marmot source..."
     if command -v curl > /dev/null 2>&1; then
-        if curl -fsSL -o "$tmp/marmotle.tar.gz" "https://github.com/naiplawan/marmotle/archive/refs/heads/main.tar.gz"; then
+        if curl -fsSL -o "$tmp/marmot.tar.gz" "https://github.com/naiplawan/marmot/archive/refs/heads/main.tar.gz"; then
             stop_line_spinner
-            tar -xzf "$tmp/marmotle.tar.gz" -C "$tmp"
-            # Extracted folder name: marmotle-main
-            if [[ -d "$tmp/marmotle-main" ]]; then
-                SOURCE_DIR="$tmp/marmotle-main"
+            tar -xzf "$tmp/marmot.tar.gz" -C "$tmp"
+            # Extracted folder name: marmot-main
+            if [[ -d "$tmp/marmot-main" ]]; then
+                SOURCE_DIR="$tmp/marmot-main"
                 return 0
             fi
         fi
@@ -134,9 +134,9 @@ resolve_source_dir() {
 
     start_line_spinner "Cloning marmot source..."
     if command -v git > /dev/null 2>&1; then
-        if git clone --depth=1 https://github.com/naiplawan/marmotle.git "$tmp/marmotle" > /dev/null 2>&1; then
+        if git clone --depth=1 https://github.com/naiplawan/marmot.git "$tmp/marmot" > /dev/null 2>&1; then
             stop_line_spinner
-            SOURCE_DIR="$tmp/marmotle"
+            SOURCE_DIR="$tmp/marmot"
             return 0
         fi
     fi
@@ -147,14 +147,14 @@ resolve_source_dir() {
 }
 
 get_source_version() {
-    local source_marmotle="$SOURCE_DIR/marmotle"
-    if [[ -f "$source_marmotle" ]]; then
-        sed -n 's/^VERSION="\(.*\)"$/\1/p' "$source_marmotle" | head -n1
+    local source_marmot="$SOURCE_DIR/marmot"
+    if [[ -f "$source_marmot" ]]; then
+        sed -n 's/^VERSION="\(.*\)"$/\1/p' "$source_marmot" | head -n1
     fi
 }
 
 get_installed_version() {
-    local binary="$INSTALL_DIR/marmotle"
+    local binary="$INSTALL_DIR/marmot"
     if [[ -x "$binary" ]]; then
         # Try running the binary first (preferred method)
         local version
@@ -185,7 +185,7 @@ parse_args() {
                 shift 1
                 ;;
             --uninstall)
-                uninstall_marmotle
+                uninstall_marmot
                 exit 0
                 ;;
             --verbose | -v)
@@ -214,7 +214,7 @@ check_requirements() {
     fi
 
     # Check if already installed via Homebrew
-    if command -v brew > /dev/null 2>&1 && brew list marmotle > /dev/null 2>&1; then
+    if command -v brew > /dev/null 2>&1 && brew list marmot > /dev/null 2>&1; then
         if [[ "$ACTION" == "update" ]]; then
             return 0
         fi
@@ -222,8 +222,8 @@ check_requirements() {
         echo -e "${YELLOW}marmot is installed via Homebrew${NC}"
         echo ""
         echo "Choose one:"
-        echo -e "  1. Update via Homebrew: ${GREEN}brew upgrade marmotle${NC}"
-        echo -e "  2. Switch to manual: ${GREEN}brew uninstall marmotle${NC} then re-run this"
+        echo -e "  1. Update via Homebrew: ${GREEN}brew upgrade marmot${NC}"
+        echo -e "  2. Switch to manual: ${GREEN}brew uninstall marmot${NC} then re-run this"
         echo ""
         exit 1
     fi
@@ -266,20 +266,20 @@ install_files() {
     config_dir_abs="$(cd "$CONFIG_DIR" && pwd)"
 
     # Copy main executable when destination differs
-    if [[ -f "$SOURCE_DIR/marmotle" ]]; then
+    if [[ -f "$SOURCE_DIR/marmot" ]]; then
         if [[ "$source_dir_abs" != "$install_dir_abs" ]]; then
             if [[ "$INSTALL_DIR" == "/usr/local/bin" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
                 log_admin "Admin access required for /usr/local/bin"
-                sudo cp "$SOURCE_DIR/marmotle" "$INSTALL_DIR/marmotle"
-                sudo chmarmotd +x "$INSTALL_DIR/marmotle"
+                sudo cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
+                sudo chmod +x "$INSTALL_DIR/marmot"
             else
-                cp "$SOURCE_DIR/marmotle" "$INSTALL_DIR/marmotle"
-                chmarmotd +x "$INSTALL_DIR/marmotle"
+                cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
+                chmod +x "$INSTALL_DIR/marmot"
             fi
-            log_success "Installed marmotle to $INSTALL_DIR"
+            log_success "Installed marmot to $INSTALL_DIR"
         fi
     else
-        log_error "marmotle executable not found in ${SOURCE_DIR:-unknown}"
+        log_error "marmot executable not found in ${SOURCE_DIR:-unknown}"
         exit 1
     fi
 
@@ -290,16 +290,16 @@ install_files() {
         else
             if [[ "$INSTALL_DIR" == "/usr/local/bin" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
                 sudo cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
-                sudo chmarmotd +x "$INSTALL_DIR/marmot"
+                sudo chmod +x "$INSTALL_DIR/marmot"
             else
                 cp "$SOURCE_DIR/marmot" "$INSTALL_DIR/marmot"
-                chmarmotd +x "$INSTALL_DIR/marmot"
+                chmod +x "$INSTALL_DIR/marmot"
             fi
             log_success "Installed marmot alias"
         fi
     fi
 
-    # Copy configuration and marmotdules
+    # Copy configuration and modules
     if [[ -d "$SOURCE_DIR/bin" ]]; then
         local source_bin_abs="$(cd "$SOURCE_DIR/bin" && pwd)"
         local config_bin_abs="$(cd "$CONFIG_DIR/bin" && pwd)"
@@ -307,8 +307,8 @@ install_files() {
             log_success "Modules already synced"
         else
             cp -r "$SOURCE_DIR/bin"/* "$CONFIG_DIR/bin/"
-            chmarmotd +x "$CONFIG_DIR/bin"/*
-            log_success "Installed marmotdules"
+            chmod +x "$CONFIG_DIR/bin"/*
+            log_success "Installed modules"
         fi
     fi
 
@@ -333,15 +333,15 @@ install_files() {
     fi
 
     if [[ -f "$CONFIG_DIR/install.sh" ]]; then
-        chmarmotd +x "$CONFIG_DIR/install.sh"
+        chmod +x "$CONFIG_DIR/install.sh"
     fi
 
-    # Update the marmotle script to use the config directory when installed elsewhere
+    # Update the marmot script to use the config directory when installed elsewhere
     if [[ "$source_dir_abs" != "$install_dir_abs" ]]; then
         if [[ "$INSTALL_DIR" == "/usr/local/bin" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
-            sudo sed -i '' "s|SCRIPT_DIR=.*|SCRIPT_DIR=\"$CONFIG_DIR\"|" "$INSTALL_DIR/marmotle"
+            sudo sed -i '' "s|SCRIPT_DIR=.*|SCRIPT_DIR=\"$CONFIG_DIR\"|" "$INSTALL_DIR/marmot"
         else
-            sed -i '' "s|SCRIPT_DIR=.*|SCRIPT_DIR=\"$CONFIG_DIR\"|" "$INSTALL_DIR/marmotle"
+            sed -i '' "s|SCRIPT_DIR=.*|SCRIPT_DIR=\"$CONFIG_DIR\"|" "$INSTALL_DIR/marmot"
         fi
     fi
 }
@@ -349,10 +349,10 @@ install_files() {
 # Verify installation
 verify_installation() {
 
-    if [[ -x "$INSTALL_DIR/marmotle" ]] && [[ -f "$CONFIG_DIR/lib/core/commarmotn.sh" ]]; then
+    if [[ -x "$INSTALL_DIR/marmot" ]] && [[ -f "$CONFIG_DIR/lib/core/common.sh" ]]; then
 
-        # Test if marmotle command works
-        if "$INSTALL_DIR/marmotle" --help > /dev/null 2>&1; then
+        # Test if marmot command works
+        if "$INSTALL_DIR/marmot" --help > /dev/null 2>&1; then
             return 0
         else
             log_warning "marmot command installed but may not be working properly"
@@ -374,7 +374,7 @@ setup_path() {
     if [[ "$INSTALL_DIR" != "/usr/local/bin" ]]; then
         log_warning "$INSTALL_DIR is not in your PATH"
         echo ""
-        echo "To use marmotle from anywhere, add this line to your shell profile:"
+        echo "To use marmot from anywhere, add this line to your shell profile:"
         echo "export PATH=\"$INSTALL_DIR:\$PATH\""
         echo ""
         echo "For example, add it to ~/.zshrc or ~/.bash_profile"
@@ -407,17 +407,17 @@ print_usage_summary() {
     if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
         echo "  marmot                # Interactive menu"
         echo "  marmot clean          # System cleanup"
-        echo "  marmot uninstall      # Remarmotve applications"
+        echo "  marmot uninstall      # Remove applications"
         echo "  marmot update         # Update marmot to the latest version"
-        echo "  marmot remarmotve         # Remarmotve marmot from the system"
+        echo "  marmot remove         # Remove marmot from the system"
         echo "  marmot --version      # Show installed version"
         echo "  marmot --help         # Show this help message"
     else
         echo "  $INSTALL_DIR/marmot                # Interactive menu"
         echo "  $INSTALL_DIR/marmot clean          # System cleanup"
-        echo "  $INSTALL_DIR/marmot uninstall      # Remarmotve applications"
+        echo "  $INSTALL_DIR/marmot uninstall      # Remove applications"
         echo "  $INSTALL_DIR/marmot update         # Update marmot to the latest version"
-        echo "  $INSTALL_DIR/marmot remarmotve         # Remarmotve marmot from the system"
+        echo "  $INSTALL_DIR/marmot remove         # Remove marmot from the system"
         echo "  $INSTALL_DIR/marmot --version      # Show installed version"
         echo "  $INSTALL_DIR/marmot --help         # Show this help message"
     fi
@@ -425,19 +425,19 @@ print_usage_summary() {
 }
 
 # Uninstall function
-uninstall_marmotle() {
+uninstall_marmot() {
     log_confirm "Uninstalling marmot"
     echo ""
 
-    # Remarmotve executable
-    if [[ -f "$INSTALL_DIR/marmotle" ]]; then
+    # Remove executable
+    if [[ -f "$INSTALL_DIR/marmot" ]]; then
         if [[ "$INSTALL_DIR" == "/usr/local/bin" ]] && [[ ! -w "$INSTALL_DIR" ]]; then
             log_admin "Admin access required"
-            sudo rm -f "$INSTALL_DIR/marmotle"
+            sudo rm -f "$INSTALL_DIR/marmot"
         else
-            rm -f "$INSTALL_DIR/marmotle"
+            rm -f "$INSTALL_DIR/marmot"
         fi
-        log_success "Remarmotved marmotle executable"
+        log_success "Removed marmot executable"
     fi
 
     if [[ -f "$INSTALL_DIR/marmot" ]]; then
@@ -446,11 +446,11 @@ uninstall_marmotle() {
         else
             rm -f "$INSTALL_DIR/marmot"
         fi
-        log_success "Remarmotved marmot alias"
+        log_success "Removed marmot alias"
     fi
 
-    # SAFETY CHECK: Verify config directory is safe to remarmotve
-    # Only allow remarmotval of marmotle-specific directories
+    # SAFETY CHECK: Verify config directory is safe to remove
+    # Only allow removal of marmot-specific directories
     local is_safe=0
 
     # Additional safety: never delete system critical paths (check first)
@@ -461,29 +461,29 @@ uninstall_marmotle() {
             is_safe=0
             ;;
         *)
-            # Safe patterns: must be in user's home and end with 'marmotle'
-            if [[ "$CONFIG_DIR" == "$HOME/.config/marmotle" ]] ||
-                [[ "$CONFIG_DIR" == "$HOME"/.*/marmotle ]]; then
+            # Safe patterns: must be in user's home and end with 'marmot'
+            if [[ "$CONFIG_DIR" == "$HOME/.config/marmot" ]] ||
+                [[ "$CONFIG_DIR" == "$HOME"/.*/marmot ]]; then
                 is_safe=1
             fi
             ;;
     esac
 
-    # Ask before remarmotving config directory
+    # Ask before removing config directory
     if [[ -d "$CONFIG_DIR" ]]; then
         if [[ $is_safe -eq 0 ]]; then
-            log_warning "Config directory $CONFIG_DIR is not safe to auto-remarmotve"
-            log_warning "Skipping automatic remarmotval for safety"
+            log_warning "Config directory $CONFIG_DIR is not safe to auto-remove"
+            log_warning "Skipping automatic removal for safety"
             echo ""
-            echo "Please manually review and remarmotve marmotle-specific files from:"
+            echo "Please manually review and remove marmot-specific files from:"
             echo "  $CONFIG_DIR"
         else
             echo ""
-            read -p "Remarmotve configuration directory $CONFIG_DIR? (y/N): " -n 1 -r
+            read -p "Remove configuration directory $CONFIG_DIR? (y/N): " -n 1 -r
             echo ""
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 rm -rf "$CONFIG_DIR"
-                log_success "Remarmotved configuration"
+                log_success "Removed configuration"
             else
                 log_success "Configuration preserved"
             fi
@@ -519,12 +519,12 @@ perform_install() {
 perform_update() {
     check_requirements
 
-    if command -v brew > /dev/null 2>&1 && brew list marmotle > /dev/null 2>&1; then
+    if command -v brew > /dev/null 2>&1 && brew list marmot > /dev/null 2>&1; then
         # Try to use shared function if available (when running from installed marmot)
         resolve_source_dir 2> /dev/null || true
-        if [[ -f "$SOURCE_DIR/lib/core/commarmotn.sh" ]]; then
+        if [[ -f "$SOURCE_DIR/lib/core/common.sh" ]]; then
             # shellcheck disable=SC1090,SC1091
-            source "$SOURCE_DIR/lib/core/commarmotn.sh"
+            source "$SOURCE_DIR/lib/core/common.sh"
             update_via_homebrew "$VERSION"
         else
             # Fallback: inline implementation
@@ -544,14 +544,14 @@ perform_update() {
                 echo "Upgrading marmot..."
             fi
             local upgrade_output
-            upgrade_output=$(brew upgrade marmotle 2>&1) || true
+            upgrade_output=$(brew upgrade marmot 2>&1) || true
             if [[ -t 1 ]]; then
                 stop_line_spinner
             fi
 
             if echo "$upgrade_output" | grep -q "already installed"; then
                 local current_version
-                current_version=$(brew list --versions marmotle 2> /dev/null | awk '{print $2}')
+                current_version=$(brew list --versions marmot 2> /dev/null | awk '{print $2}')
                 echo -e "${GREEN}✓${NC} Already on latest version (${current_version:-$VERSION})"
             elif echo "$upgrade_output" | grep -q "Error:"; then
                 log_error "Homebrew upgrade failed"
@@ -560,11 +560,11 @@ perform_update() {
             else
                 echo "$upgrade_output" | grep -Ev "^(==>|Updating Homebrew|Warning:)" || true
                 local new_version
-                new_version=$(brew list --versions marmotle 2> /dev/null | awk '{print $2}')
+                new_version=$(brew list --versions marmot 2> /dev/null | awk '{print $2}')
                 echo -e "${GREEN}✓${NC} Updated to latest version (${new_version:-$VERSION})"
             fi
 
-            rm -f "$HOME/.cache/marmotle/version_check" "$HOME/.cache/marmotle/update_message"
+            rm -f "$HOME/.cache/marmot/version_check" "$HOME/.cache/marmot/update_message"
         fi
         exit 0
     fi

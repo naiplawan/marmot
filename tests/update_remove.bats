@@ -32,8 +32,8 @@ setup() {
     run env HOME="$HOME" PROJECT_ROOT="$PROJECT_ROOT" bash --noprofile --norc << 'EOF'
 set -euo pipefail
 marmot_TEST_BREW_UPDATE_OUTPUT="Updated 0 formulae"
-marmot_TEST_BREW_UPGRADE_OUTPUT="Warning: marmotle 1.7.9 already installed"
-marmot_TEST_BREW_LIST_OUTPUT="marmotle 1.7.9"
+marmot_TEST_BREW_UPGRADE_OUTPUT="Warning: marmot 1.7.9 already installed"
+marmot_TEST_BREW_LIST_OUTPUT="marmot 1.7.9"
 start_inline_spinner() { :; }
 stop_inline_spinner() { :; }
 brew() {
@@ -44,7 +44,7 @@ brew() {
   esac
 }
 export -f brew start_inline_spinner stop_inline_spinner
-source "$PROJECT_ROOT/lib/core/commarmotn.sh"
+source "$PROJECT_ROOT/lib/core/common.sh"
 update_via_homebrew "1.7.9"
 EOF
 
@@ -52,7 +52,7 @@ EOF
     [[ "$output" == *"Already on latest version"* ]]
 }
 
-@test "update_marmotle skips download when already latest" {
+@test "update_marmot skips download when already latest" {
     run env HOME="$HOME" PROJECT_ROOT="$PROJECT_ROOT" PATH="$HOME/fake-bin:/usr/bin:/bin" TERM="dumb" bash --noprofile --norc << 'EOF'
 set -euo pipefail
 mkdir -p "$HOME/fake-bin"
@@ -79,37 +79,37 @@ else
   echo "VERSION=\"$CURRENT_VERSION\""
 fi
 SCRIPT
-chmarmotd +x "$HOME/fake-bin/curl"
+chmod +x "$HOME/fake-bin/curl"
 cat > "$HOME/fake-bin/brew" <<'SCRIPT'
 #!/usr/bin/env bash
 exit 1
 SCRIPT
-chmarmotd +x "$HOME/fake-bin/brew"
+chmod +x "$HOME/fake-bin/brew"
 
-"$PROJECT_ROOT/marmotle" update
+"$PROJECT_ROOT/marmot" update
 EOF
 
     [ "$status" -eq 0 ]
     [[ "$output" == *"Already on latest version"* ]]
 }
 
-@test "remarmotve_marmotle deletes manual binaries and caches" {
+@test "remove_marmot deletes manual binaries and caches" {
     mkdir -p "$HOME/.local/bin"
-    touch "$HOME/.local/bin/marmotle"
     touch "$HOME/.local/bin/marmot"
-    mkdir -p "$HOME/.config/marmotle" "$HOME/.cache/marmotle"
+    touch "$HOME/.local/bin/marmot"
+    mkdir -p "$HOME/.config/marmot" "$HOME/.cache/marmot"
 
     run env HOME="$HOME" PROJECT_ROOT="$PROJECT_ROOT" PATH="/usr/bin:/bin" bash --noprofile --norc << 'EOF'
 set -euo pipefail
 start_inline_spinner() { :; }
 stop_inline_spinner() { :; }
 export -f start_inline_spinner stop_inline_spinner
-printf '\n' | "$PROJECT_ROOT/marmotle" remarmotve
+printf '\n' | "$PROJECT_ROOT/marmot" remove
 EOF
 
     [ "$status" -eq 0 ]
-    [ ! -f "$HOME/.local/bin/marmotle" ]
     [ ! -f "$HOME/.local/bin/marmot" ]
-    [ ! -d "$HOME/.config/marmotle" ]
-    [ ! -d "$HOME/.cache/marmotle" ]
+    [ ! -f "$HOME/.local/bin/marmot" ]
+    [ ! -d "$HOME/.config/marmot" ]
+    [ ! -d "$HOME/.cache/marmot" ]
 }

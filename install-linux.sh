@@ -495,7 +495,7 @@ uninstall_marmot() {
             ;;
     esac
 
-    # Ask before remarmotving config directory
+    # Ask before removing config directory
     if [[ -d "$CONFIG_DIR" ]]; then
         if [[ $is_safe -eq 0 ]]; then
             log_warning "Config directory $CONFIG_DIR is not safe to auto-remove"

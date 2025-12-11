@@ -24,11 +24,11 @@ setup() {
     export TERM="xterm-256color"
     rm -rf "${HOME:?}"/*
     rm -rf "$HOME/Library" "$HOME/.config"
-    mkdir -p "$HOME/Library/Caches" "$HOME/.config/marmotle"
+    mkdir -p "$HOME/Library/Caches" "$HOME/.config/marmot"
 }
 
-@test "marmot clean --dry-run skips system cleanup in non-interactive marmotde" {
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" clean --dry-run
+@test "marmot clean --dry-run skips system cleanup in non-interactive mode" {
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" clean --dry-run
     [ "$status" -eq 0 ]
     [[ "$output" == *"Dry Run Mode"* ]]
     [[ "$output" != *"Deep system-level cleanup"* ]]
@@ -38,7 +38,7 @@ setup() {
     mkdir -p "$HOME/Library/Caches/TestApp"
     echo "cache data" > "$HOME/Library/Caches/TestApp/cache.tmp"
 
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" clean --dry-run
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" clean --dry-run
     [ "$status" -eq 0 ]
     [[ "$output" == *"User app cache"* ]]
     [[ "$output" == *"Potential space"* ]]
@@ -49,11 +49,11 @@ setup() {
     mkdir -p "$HOME/Library/Caches/WhitelistedApp"
     echo "keep me" > "$HOME/Library/Caches/WhitelistedApp/data.tmp"
 
-    cat > "$HOME/.config/marmotle/whitelist" << EOF
+    cat > "$HOME/.config/marmot/whitelist" << EOF
 $HOME/Library/Caches/WhitelistedApp*
 EOF
 
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" clean --dry-run
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" clean --dry-run
     [ "$status" -eq 0 ]
     [[ "$output" == *"Protected"* ]]
     [ -f "$HOME/Library/Caches/WhitelistedApp/data.tmp" ]
@@ -63,7 +63,7 @@ EOF
     mkdir -p "$HOME/.m2/repository/org/example"
     echo "dependency" > "$HOME/.m2/repository/org/example/lib.jar"
 
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" clean --dry-run
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" clean --dry-run
     [ "$status" -eq 0 ]
     [ -f "$HOME/.m2/repository/org/example/lib.jar" ]
     [[ "$output" != *"Maven repository cache"* ]]
@@ -82,11 +82,11 @@ EOF
     mkdir -p "$HOME/Documents"
     touch "$HOME/Documents/.DS_Store"
 
-    cat > "$HOME/.config/marmotle/whitelist" << EOF
+    cat > "$HOME/.config/marmot/whitelist" << EOF
 FINDER_METADATA_SENTINEL
 EOF
 
-    run env HOME="$HOME" "$PROJECT_ROOT/marmotle" clean --dry-run
+    run env HOME="$HOME" "$PROJECT_ROOT/marmot" clean --dry-run
     [ "$status" -eq 0 ]
     [[ "$output" == *"protected by whitelist"* ]]
     [ -f "$HOME/Documents/.DS_Store" ]

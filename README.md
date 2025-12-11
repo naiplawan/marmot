@@ -3,17 +3,17 @@
   <p><em>Dig deep like a marmarmott to optimize your system.</em></p>
   <p>
     <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-informational?style=flat-square" alt="Platform">
-    <a href="https://github.com/naiplawan/marmotle/stargazers"><img src="https://img.shields.io/github/stars/naiplawan/marmotle?style=flat-square" alt="Stars"></a>
-    <a href="https://github.com/naiplawan/marmotle/releases"><img src="https://img.shields.io/github/v/tag/naiplawan/marmotle?label=version&style=flat-square" alt="Version"></a>
+    <a href="https://github.com/naiplawan/marmot/stargazers"><img src="https://img.shields.io/github/stars/naiplawan/marmot?style=flat-square" alt="Stars"></a>
+    <a href="https://github.com/naiplawan/marmot/releases"><img src="https://img.shields.io/github/v/tag/naiplawan/marmot?label=version&style=flat-square" alt="Version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
-    <a href="https://github.com/naiplawan/marmotle/commits"><img src="https://img.shields.io/github/commit-activity/m/naiplawan/marmotle?style=flat-square" alt="Commits"></a>
+    <a href="https://github.com/naiplawan/marmot/commits"><img src="https://img.shields.io/github/commit-activity/m/naiplawan/marmot?style=flat-square" alt="Commits"></a>
     <a href="https://twitter.com/HiTw93"><img src="https://img.shields.io/badge/follow-Tw93-red?style=flat-square&logo=Twitter" alt="Twitter"></a>
     <a href="https://t.me/+GclQS9ZnxyI2ODQ1"><img src="https://img.shields.io/badge/chat-Telegram-blueviolet?style=flat-square&logo=Telegram" alt="Telegram"></a>
   </p>
 </div>
 
 <p align="center">
-  <img src="https://cdn.tw93.fun/img/marmotle.jpeg" alt="Marmarmott - 95.50GB freed" width="800" />
+  <img src="https://cdn.tw93.fun/img/marmot.jpeg" alt="Marmarmott - 95.50GB freed" width="800" />
 </p>
 
 ## Features
@@ -30,27 +30,27 @@
 ### macOS Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/naiplawan/marmotle/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naiplawan/marmot/main/install.sh | bash
 ```
 
 Or via Homebrew:
 
 ```bash
-brew install tw93/tap/marmotle
+brew install tw93/tap/marmot
 ```
 
 ### Linux Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/naiplawan/marmotle/main/install-linux.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naiplawan/marmot/main/install-linux.sh | bash
 ```
 
 Or download the binary:
 
 ```bash
-wget https://github.com/naiplawan/marmotle/releases/latest/download/marmotle-linux-amd64.tar.gz
-tar -xzf marmotle-linux-amd64.tar.gz
-sudo cp marmotle /usr/local/bin/
+wget https://github.com/naiplawan/marmot/releases/latest/download/marmot-linux-amd64.tar.gz
+tar -xzf marmot-linux-amd64.tar.gz
+sudo cp marmot /usr/local/bin/
 ```
 
 ### Usage
@@ -249,16 +249,16 @@ Adds 5 commands: `clean`, `uninstall`, `optimize`, `analyze`, `status`.
 
 **macOS:**
 ```bash
-git clone https://github.com/naiplawan/marmotle.git
-cd marmotle
+git clone https://github.com/naiplawan/marmot.git
+cd marmot
 ./scripts/build-analyze.sh
 ./scripts/build-status.sh
 ```
 
 **Linux:**
 ```bash
-git clone https://github.com/naiplawan/marmotle.git
-cd marmotle
+git clone https://github.com/naiplawan/marmot.git
+cd marmot
 ./scripts/build-analyze-linux.sh
 ./scripts/build-status-linux.sh
 ```

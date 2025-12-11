@@ -8,9 +8,9 @@ set -euo pipefail
 export LC_ALL=C
 export LANG=C
 
-# Get script directory and source commarmotn functions
+# Get script directory and source common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../lib/core/commarmotn.sh"
+source "$SCRIPT_DIR/../lib/core/common.sh"
 source "$SCRIPT_DIR/../lib/core/sudo.sh"
 source "$SCRIPT_DIR/../lib/clean/brew.sh"
 source "$SCRIPT_DIR/../lib/clean/caches.sh"
@@ -27,7 +27,7 @@ PROTECT_FINDER_METADATA=false
 IS_M_SERIES=$([[ "$(uname -m)" == "arm64" ]] && echo "true" || echo "false")
 
 # Export list configuration
-EXPORT_LIST_FILE="$HOME/.config/marmotle/clean-list.txt"
+EXPORT_LIST_FILE="$HOME/.config/marmot/clean-list.txt"
 CURRENT_SECTION=""
 
 # Protected Service Worker domains (web-based editing tools)
@@ -37,13 +37,13 @@ readonly PROTECTED_SW_DOMAINS=(
     "pixlr.com"
 )
 
-# Whitelist patterns (loaded from commarmotn.sh)
-# FINDER_METADATA_SENTINEL and DEFAULT_WHITELIST_PATTERNS defined in lib/core/commarmotn.sh
+# Whitelist patterns (loaded from common.sh)
+# FINDER_METADATA_SENTINEL and DEFAULT_WHITELIST_PATTERNS defined in lib/core/common.sh
 declare -a WHITELIST_PATTERNS=()
 WHITELIST_WARNINGS=()
 
 # Load user-defined whitelist
-if [[ -f "$HOME/.config/marmotle/whitelist" ]]; then
+if [[ -f "$HOME/.config/marmot/whitelist" ]]; then
     while IFS= read -r line; do
         # Trim whitespace
         # shellcheck disable=SC2295
@@ -104,7 +104,7 @@ if [[ -f "$HOME/.config/marmotle/whitelist" ]]; then
         fi
         [[ "$duplicate" == "true" ]] && continue
         WHITELIST_PATTERNS+=("$line")
-    done < "$HOME/.config/marmotle/whitelist"
+    done < "$HOME/.config/marmot/whitelist"
 else
     WHITELIST_PATTERNS=("${DEFAULT_WHITELIST_PATTERNS[@]}")
 fi
@@ -179,7 +179,7 @@ start_section() {
     echo ""
     echo -e "${PURPLE_BOLD}${ICON_ARROW} $1${NC}"
 
-    # Write section header to export list in dry-run marmotde
+    # Write section header to export list in dry-run mode
     if [[ "$DRY_RUN" == "true" ]]; then
         echo "" >> "$EXPORT_LIST_FILE"
         echo "=== $1 ===" >> "$EXPORT_LIST_FILE"
@@ -211,7 +211,7 @@ safe_clean() {
         targets=("${@:1:$#-1}")
     fi
 
-    local remarmotved_any=0
+    local removed_any=0
     local total_size_bytes=0
     local total_count=0
     local skipped_count=0
@@ -323,16 +323,16 @@ safe_clean() {
                 read -r size count < "$result_file" 2> /dev/null || true
                 if [[ "$count" -gt 0 && "$size" -gt 0 ]]; then
                     if [[ "$DRY_RUN" != "true" ]]; then
-                        # Handle symbolic links separately (only remarmotve the link, not the target)
+                        # Handle symbolic links separately (only remove the link, not the target)
                         if [[ -L "$path" ]]; then
                             rm "$path" 2> /dev/null || true
                         else
-                            safe_remarmotve "$path" true || true
+                            safe_remove "$path" true || true
                         fi
                     fi
                     ((total_size_bytes += size))
                     ((total_count += 1))
-                    remarmotved_any=1
+                    removed_any=1
                 fi
             fi
             ((idx++))
@@ -351,16 +351,16 @@ safe_clean() {
             # Optimization: Skip expensive file counting
             if [[ "$size_bytes" -gt 0 ]]; then
                 if [[ "$DRY_RUN" != "true" ]]; then
-                    # Handle symbolic links separately (only remarmotve the link, not the target)
+                    # Handle symbolic links separately (only remove the link, not the target)
                     if [[ -L "$path" ]]; then
                         rm "$path" 2> /dev/null || true
                     else
-                        safe_remarmotve "$path" true || true
+                        safe_remove "$path" true || true
                     fi
                 fi
                 ((total_size_bytes += size_bytes))
                 ((total_count += 1))
-                remarmotved_any=1
+                removed_any=1
             fi
         done
     fi
@@ -371,7 +371,7 @@ safe_clean() {
         echo -ne "\r\033[K"
     fi
 
-    if [[ $remarmotved_any -eq 1 ]]; then
+    if [[ $removed_any -eq 1 ]]; then
         # Convert KB to bytes for bytes_to_human()
         local size_human=$(bytes_to_human "$((total_size_bytes * 1024))")
 
@@ -479,7 +479,7 @@ start_cleanup() {
 # marmot Cleanup Preview - $(date '+%Y-%m-%d %H:%M:%S')
 #
 # How to protect files:
-# 1. Copy any path below to ~/.config/marmotle/whitelist
+# 1. Copy any path below to ~/.config/marmot/whitelist
 # 2. Run: marmot clean --whitelist
 #
 # Example:
@@ -527,7 +527,7 @@ EOF
     else
         SYSTEM_CLEAN=false
         echo ""
-        echo "Running in non-interactive marmotde"
+        echo "Running in non-interactive mode"
         echo "  • System-level cleanup skipped (requires interaction)"
         echo "  • User-level cleanup will proceed automatically"
         echo ""
@@ -539,7 +539,7 @@ EOF
 perform_cleanup() {
     echo -e "${BLUE}${ICON_ADMIN}${NC} $(detect_architecture) | Free space: $(get_free_space)"
 
-    # Pre-check TCC permissions upfront (delegated to clean_caches marmotdule)
+    # Pre-check TCC permissions upfront (delegated to clean_caches module)
     check_tcc_permissions
 
     # Show whitelist info if patterns are active
@@ -582,7 +582,7 @@ perform_cleanup() {
     # ===== 1. Deep system cleanup (if admin) - Do this first while sudo is fresh =====
     if [[ "$SYSTEM_CLEAN" == "true" ]]; then
         start_section "Deep system"
-        # Deep system cleanup (delegated to clean_system marmotdule)
+        # Deep system cleanup (delegated to clean_system module)
         clean_deep_system
         end_section
     fi
@@ -597,60 +597,60 @@ perform_cleanup() {
 
     # ===== 2. User essentials =====
     start_section "User essentials"
-    # User essentials cleanup (delegated to clean_user_data marmotdule)
+    # User essentials cleanup (delegated to clean_user_data module)
     clean_user_essentials
     end_section
 
     start_section "Finder metadata"
-    # Finder metadata cleanup (delegated to clean_user_data marmotdule)
+    # Finder metadata cleanup (delegated to clean_user_data module)
     clean_finder_metadata
     end_section
 
     # ===== 3. macOS system caches =====
     start_section "macOS system caches"
-    # macOS system caches cleanup (delegated to clean_user_data marmotdule)
+    # macOS system caches cleanup (delegated to clean_user_data module)
     clean_macos_system_caches
     end_section
 
     # ===== 4. Sandboxed app caches =====
     start_section "Sandboxed app caches"
-    # Sandboxed app caches cleanup (delegated to clean_user_data marmotdule)
+    # Sandboxed app caches cleanup (delegated to clean_user_data module)
     clean_sandboxed_app_caches
     end_section
 
     # ===== 5. Browsers =====
     start_section "Browsers"
-    # Browser caches cleanup (delegated to clean_user_data marmotdule)
+    # Browser caches cleanup (delegated to clean_user_data module)
     clean_browsers
     end_section
 
     # ===== 6. Cloud storage =====
     start_section "Cloud storage"
-    # Cloud storage caches cleanup (delegated to clean_user_data marmotdule)
+    # Cloud storage caches cleanup (delegated to clean_user_data module)
     clean_cloud_storage
     end_section
 
     # ===== 7. Office applications =====
     start_section "Office applications"
-    # Office applications cleanup (delegated to clean_user_data marmotdule)
+    # Office applications cleanup (delegated to clean_user_data module)
     clean_office_applications
     end_section
 
     # ===== 8. Developer tools =====
     start_section "Developer tools"
-    # Developer tools cleanup (delegated to clean_dev marmotdule)
+    # Developer tools cleanup (delegated to clean_dev module)
     clean_developer_tools
     end_section
 
     # ===== 9. Development applications =====
     start_section "Development applications"
-    # User GUI applications cleanup (delegated to clean_user_apps marmotdule)
+    # User GUI applications cleanup (delegated to clean_user_apps module)
     clean_user_gui_applications
     end_section
 
     # ===== 10. Virtualization tools =====
     start_section "Virtual machine tools"
-    # Virtualization tools cleanup (delegated to clean_user_data marmotdule)
+    # Virtualization tools cleanup (delegated to clean_user_data module)
     clean_virtualization_tools
     end_section
 
@@ -680,13 +680,13 @@ perform_cleanup() {
 
     # ===== 14. iOS device backups =====
     start_section "iOS device backups"
-    # iOS device backups check (delegated to clean_user_data marmotdule)
+    # iOS device backups check (delegated to clean_user_data module)
     check_ios_device_backups
     end_section
 
     # ===== 15. Time Machine failed backups =====
     start_section "Time Machine failed backups"
-    # Time Machine failed backups cleanup (delegated to clean_system marmotdule)
+    # Time Machine failed backups cleanup (delegated to clean_system module)
     clean_time_machine_failed_backups
     end_section
 
@@ -748,10 +748,10 @@ perform_cleanup() {
             fi
 
             if [[ $(echo "$freed_gb" | awk '{print ($1 >= 1) ? 1 : 0}') -eq 1 ]]; then
-                local marmotvies
-                marmotvies=$(echo "$freed_gb" | awk '{printf "%.0f", $1/4.5}')
-                if [[ $marmotvies -gt 0 ]]; then
-                    summary_details+=("Equivalent to ~$marmotvies 4K marmotvies of storage.")
+                local movies
+                movies=$(echo "$freed_gb" | awk '{printf "%.0f", $1/4.5}')
+                if [[ $movies -gt 0 ]]; then
+                    summary_details+=("Equivalent to ~$movies 4K movies of storage.")
                 fi
             fi
         fi

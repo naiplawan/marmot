@@ -2,9 +2,9 @@
 
 set -euo pipefail
 
-# Load commarmotn functions
+# Load common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "$SCRIPT_DIR/lib/core/commarmotn.sh"
+source "$SCRIPT_DIR/lib/core/common.sh"
 source "$SCRIPT_DIR/lib/core/sudo.sh"
 source "$SCRIPT_DIR/lib/manage/update.sh"
 source "$SCRIPT_DIR/lib/manage/autofix.sh"
@@ -12,11 +12,11 @@ source "$SCRIPT_DIR/lib/optimize/maintenance.sh"
 source "$SCRIPT_DIR/lib/optimize/tasks.sh"
 source "$SCRIPT_DIR/lib/check/health_json.sh"
 
-# Load check marmotdules
+# Load check modules
 source "$SCRIPT_DIR/lib/check/all.sh"
 source "$SCRIPT_DIR/lib/manage/whitelist.sh"
 
-# Colors and icons from commarmotn.sh
+# Colors and icons from common.sh
 
 print_header() {
     printf '\n'
@@ -105,8 +105,8 @@ show_system_health() {
     local health_json="$1"
 
     # Parse system health using jq with fallback to 0
-    local mem_used=$(echo "$health_json" | jq -r '.memarmotry_used_gb // 0' 2> /dev/null || echo "0")
-    local mem_total=$(echo "$health_json" | jq -r '.memarmotry_total_gb // 0' 2> /dev/null || echo "0")
+    local mem_used=$(echo "$health_json" | jq -r '.memory_used_gb // 0' 2> /dev/null || echo "0")
+    local mem_total=$(echo "$health_json" | jq -r '.memory_total_gb // 0' 2> /dev/null || echo "0")
     local disk_used=$(echo "$health_json" | jq -r '.disk_used_gb // 0' 2> /dev/null || echo "0")
     local disk_total=$(echo "$health_json" | jq -r '.disk_total_gb // 0' 2> /dev/null || echo "0")
     local disk_percent=$(echo "$health_json" | jq -r '.disk_used_percent // 0' 2> /dev/null || echo "0")
@@ -185,16 +185,16 @@ cleanup_path() {
         size_display=$(bytes_to_human "$((size_kb * 1024))")
     fi
 
-    local remarmotved=false
-    if safe_remarmotve "$expanded_path" true; then
-        remarmotved=true
-    elif request_sudo_access "Remarmotving $label requires admin access"; then
-        if safe_sudo_remarmotve "$expanded_path"; then
-            remarmotved=true
+    local removed=false
+    if safe_remove "$expanded_path" true; then
+        removed=true
+    elif request_sudo_access "Removing $label requires admin access"; then
+        if safe_sudo_remove "$expanded_path"; then
+            removed=true
         fi
     fi
 
-    if [[ "$remarmotved" == "true" ]]; then
+    if [[ "$removed" == "true" ]]; then
         if [[ -n "$size_display" ]]; then
             echo -e "${GREEN}${ICON_SUCCESS}${NC} $label ${GREEN}(${size_display})${NC}"
         else
